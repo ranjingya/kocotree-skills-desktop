@@ -73,7 +73,7 @@ export class MockSkillApi implements SkillApi {
   }
 
   private async wait(): Promise<void> {
-    await new Promise((resolve) => window.setTimeout(resolve, this.delayMs));
+    await new Promise((resolve) => globalThis.setTimeout(resolve, this.delayMs));
   }
 
   private requireUser(): UserDto {

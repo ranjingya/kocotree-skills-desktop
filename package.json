@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "api:generate": "openapi-typescript docs/openapi.yaml -o src/api/schema.d.ts",
+    "test": "vitest run",
     "preview": "vite preview",
     "tauri": "tauri"
   },
@@ -25,6 +26,7 @@
     "@vitejs/plugin-react": "^6.0.2",
     "openapi-typescript": "^7.13.0",
     "typescript": "~6.0.3",
-    "vite": "^8.0.16"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.10"
   }
 }

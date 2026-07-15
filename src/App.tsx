@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Modal, Toast } from "@douyinfe/semi-ui";
 import {
   skillApi,
@@ -10,6 +10,7 @@ import {
 } from "./api";
 import { AppIcon } from "./components/AppIcon";
 import { SkillDetailSheet } from "./components/SkillDetailSheet";
+import { UploadPage } from "./components/UploadPage";
 import "./App.css";
 
 type PageKey = "browse" | "upload";
@@ -88,10 +89,12 @@ function BrowsePage({
   installedSkillIds,
   onInstall,
   onOpen,
+  refreshKey,
 }: {
   installedSkillIds: Set<string>;
   onInstall: (skill: SkillSummaryDto) => void;
   onOpen: (skill: SkillSummaryDto) => void;
+  refreshKey: number;
 }) {
   const [query, setQuery] = useState("");
   const [tagId, setTagId] = useState("all");
@@ -128,7 +131,7 @@ function BrowsePage({
         .finally(() => { if (active) setLoading(false); });
     }, 180);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [query, sort, tagId]);
+  }, [query, refreshKey, sort, tagId]);
 
   return (
     <main className="page-content">
@@ -222,102 +225,14 @@ function BrowsePage({
 }
 
 /**
- * 功能说明：渲染 Skill 上传页面框架并收集首版发布所需信息。
- * @returns Skill 上传页面的 React 元素。
- */
-function UploadPage() {
-  const [fileName, setFileName] = useState("");
-  const [notice, setNotice] = useState("");
-
-  /**
-   * 功能说明：提交上传表单，当前阶段记录表单流程并显示接口待接入提示。
-   * @param event - React 表单提交事件。
-   * @returns 无返回值。
-   */
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    console.info("[KocotreeSkills] 提交 Skill 上传表单", { fileName });
-    setNotice("页面框架已完成，接入后端接口后将在这里上传并发布新版本。");
-  }
-
-  return (
-    <main className="page-content upload-page">
-      <header className="page-heading">
-        <h1>上传 Skill</h1>
-        <p>发布新的 Skill，或为已有 Skill 上传更新版本</p>
-      </header>
-
-      <form className="upload-panel" onSubmit={handleSubmit}>
-        <div className="form-section-heading">
-          <span className="section-number">1</span>
-          <div>
-            <h2>基本信息</h2>
-            <p>这些信息会展示在 Skill 浏览页面</p>
-          </div>
-        </div>
-
-        <div className="form-grid">
-          <label className="field field-wide">
-            <span>Skill 名称</span>
-            <input name="name" required placeholder="例如：代码审查助手" />
-          </label>
-          <label className="field">
-            <span>版本号</span>
-            <input name="version" required defaultValue="1.0.0" />
-          </label>
-          <label className="field">
-            <span>来源</span>
-            <input name="source" required placeholder="例如：研发效能组" />
-          </label>
-          <label className="field field-wide">
-            <span>简短说明</span>
-            <textarea name="description" required placeholder="说明这个 Skill 可以解决什么问题" />
-          </label>
-        </div>
-
-        <div className="form-divider" />
-
-        <div className="form-section-heading">
-          <span className="section-number">2</span>
-          <div>
-            <h2>Skill 文件</h2>
-            <p>压缩包根目录必须包含 SKILL.md</p>
-          </div>
-        </div>
-
-        <label className="file-dropzone">
-          <input
-            type="file"
-            accept=".zip"
-            onChange={(event) => setFileName(event.currentTarget.files?.[0]?.name ?? "")}
-          />
-          <span className="dropzone-icon"><AppIcon name="upload" size={25} /></span>
-          <strong>{fileName || "拖入 Skill ZIP，或点击选择文件"}</strong>
-          <small>{fileName ? "已选择文件" : "仅支持 .zip 文件"}</small>
-        </label>
-
-        {notice && <div className="form-notice">{notice}</div>}
-
-        <div className="form-actions">
-          <button className="secondary-button" type="reset" onClick={() => setFileName("")}>
-            清空
-          </button>
-          <button className="primary-button" type="submit">
-            <AppIcon name="upload" size={17} />上传 Skill
-          </button>
-        </div>
-      </form>
-    </main>
-  );
-}
-
-/**
  * 功能说明：渲染 Kocotree Skills 客户端外壳，并管理浏览、上传与安装演示状态。
  * @returns 应用主界面的 React 元素。
  */
 function App() {
   const [activePage, setActivePage] = useState<PageKey>("browse");
   const [selectedSkill, setSelectedSkill] = useState<SkillSummaryDto | null>(null);
+  const [uploadTargetSkill, setUploadTargetSkill] = useState<SkillSummaryDto | null>(null);
+  const [browseRefreshKey, setBrowseRefreshKey] = useState(0);
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
   const [loginVisible, setLoginVisible] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -442,8 +357,17 @@ function App() {
     requireAuth(() => {
       console.info("[KocotreeSkills] 进入新版本上传流程", { skillId: skill.id });
       setSelectedSkill(null);
+      setUploadTargetSkill(skill);
       setActivePage("upload");
     });
+  }
+
+  function handlePublished(skill: SkillSummaryDto): void {
+    setBrowseRefreshKey((current) => current + 1);
+    setUploadTargetSkill(null);
+    setActivePage("browse");
+    setSelectedSkill(skill);
+    Toast.success(`${skill.displayName} v${skill.latestVersion.version} 发布成功`);
   }
 
   return (
@@ -466,7 +390,7 @@ function App() {
           <button
             className={activePage === "upload" ? "active" : ""}
             type="button"
-            onClick={() => requireAuth(() => setActivePage("upload"))}
+            onClick={() => requireAuth(() => { setUploadTargetSkill(null); setActivePage("upload"); })}
           >
             <AppIcon name="upload" size={20} />
             <span>上传 Skill</span>
@@ -488,9 +412,19 @@ function App() {
 
       <div className="main-area">
         {activePage === "browse" ? (
-          <BrowsePage installedSkillIds={installedSkillIds} onInstall={handleInstall} onOpen={handleOpenSkill} />
+          <BrowsePage
+            installedSkillIds={installedSkillIds}
+            onInstall={handleInstall}
+            onOpen={handleOpenSkill}
+            refreshKey={browseRefreshKey}
+          />
         ) : (
-          <UploadPage />
+          <UploadPage
+            targetSkill={uploadTargetSkill}
+            onCancel={() => { setUploadTargetSkill(null); setActivePage("browse"); }}
+            onPublished={handlePublished}
+            onSwitchToCreate={() => setUploadTargetSkill(null)}
+          />
         )}
       </div>
 

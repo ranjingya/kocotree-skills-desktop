@@ -533,6 +533,13 @@ textarea:focus-visible,
   overflow-y: auto;
 }
 
+.upload-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
 .upload-panel {
   max-width: 780px;
   padding: 24px;
@@ -642,6 +649,11 @@ textarea:focus-visible,
   background: #f7fcfa;
 }
 
+.file-dropzone.is-loading {
+  cursor: wait;
+  opacity: 0.75;
+}
+
 .file-dropzone input {
   position: absolute;
   width: 1px;
@@ -667,6 +679,109 @@ textarea:focus-visible,
 
 .file-dropzone small {
   color: #9699a1;
+}
+
+.inspection-result {
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid #cce8dc;
+  border-radius: 10px;
+  background: #f7fcfa;
+}
+
+.inspection-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.inspection-result dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+  margin: 0;
+}
+
+.inspection-result dl > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.inspection-result dt {
+  color: #7d828a;
+  font-size: 11px;
+}
+
+.inspection-result dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #34383f;
+  font-size: 12px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+}
+
+.inspection-result code,
+.mismatch-notice code {
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.inspection-warning {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid #dfeee8;
+  color: #8a7254;
+  font-size: 11px;
+}
+
+.mismatch-notice {
+  display: grid;
+  justify-items: start;
+  gap: 7px;
+  margin-top: 16px;
+  padding: 13px 15px;
+  border: 1px solid #f0d6ae;
+  border-radius: 9px;
+  background: #fffaf2;
+  color: #6f5630;
+  font-size: 12px;
+}
+
+.tag-field {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tag-field legend {
+  margin-bottom: 8px;
+  color: #4c5058;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tag-field > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.version-form-grid {
+  margin-top: 16px;
+}
+
+.form-error {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid #f2c7c7;
+  border-radius: 8px;
+  background: #fff6f6;
+  color: #b13a3a;
+  font-size: 12px;
 }
 
 .form-notice {
@@ -704,6 +819,12 @@ textarea:focus-visible,
   border: 1px solid #318668;
   background: #318668;
   color: #fff;
+}
+
+.primary-button:disabled {
+  border-color: #a9c9bd;
+  background: #a9c9bd;
+  cursor: not-allowed;
 }
 
 .secondary-button {
