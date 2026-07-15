@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tauri-study",
+  "productName": "Kocotree Skills",
   "version": "0.1.0",
   "identifier": "n.kktree.tauri-study",
   "build": {
@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "tauri-study",
-        "width": 800,
-        "height": 600
+        "title": "Kocotree Skills",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 820,
+        "minHeight": 600
       }
     ],
     "security": {
