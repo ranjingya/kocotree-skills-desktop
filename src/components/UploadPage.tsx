@@ -60,7 +60,11 @@ export function UploadPage({
     setVersion(targetSkill ? "" : "1.0.0");
     setChangelog("");
     setError("");
-  }, [targetSkill]);
+    if (!targetSkill && inspection) {
+      setDisplayName(inspection.skillName);
+      setDisplayDescription(inspection.skillDescription);
+    }
+  }, [inspection, targetSkill]);
 
   /**
    * 功能说明：选择 ZIP 后立即调用解析接口并展示只读包信息。

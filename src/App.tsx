@@ -217,7 +217,7 @@ function BrowsePage({
         <section className="empty-state">
           <AppIcon name="search" size={30} />
           <strong>没有找到匹配的 Skill</strong>
-          <span>换一个关键词或来源试试</span>
+          <span>换一个关键词或标签试试</span>
         </section>
       )}
     </main>
@@ -340,6 +340,7 @@ function App() {
         installedAt: new Date().toISOString(),
       });
       setInstalledSkillIds((currentIds) => new Set(currentIds).add(skill.id));
+      setBrowseRefreshKey((current) => current + 1);
       Toast.success(`模拟安装完成，正式版将写入 ~/.agents/skills（累计 ${result.installCount} 次）`);
     } catch (reason) {
       console.error("[KocotreeSkills] Skill 模拟安装失败", reason);

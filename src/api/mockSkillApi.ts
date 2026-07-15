@@ -36,12 +36,33 @@ function clone<T>(value: T): T {
 }
 
 function compareSemVer(left: string, right: string): number {
-  const leftParts = left.split(".").map(Number);
-  const rightParts = right.split(".").map(Number);
+  const [leftVersion, leftPrerelease] = left.split("+")[0].split("-");
+  const [rightVersion, rightPrerelease] = right.split("+")[0].split("-");
+  const leftParts = leftVersion.split(".").map(Number);
+  const rightParts = rightVersion.split(".").map(Number);
   for (let index = 0; index < 3; index += 1) {
     if (leftParts[index] !== rightParts[index]) {
       return leftParts[index] - rightParts[index];
     }
+  }
+  if (!leftPrerelease && !rightPrerelease) return 0;
+  if (!leftPrerelease) return 1;
+  if (!rightPrerelease) return -1;
+  const leftIdentifiers = leftPrerelease.split(".");
+  const rightIdentifiers = rightPrerelease.split(".");
+  const length = Math.max(leftIdentifiers.length, rightIdentifiers.length);
+  for (let index = 0; index < length; index += 1) {
+    const leftIdentifier = leftIdentifiers[index];
+    const rightIdentifier = rightIdentifiers[index];
+    if (leftIdentifier === undefined) return -1;
+    if (rightIdentifier === undefined) return 1;
+    if (leftIdentifier === rightIdentifier) continue;
+    const leftNumeric = /^\d+$/.test(leftIdentifier);
+    const rightNumeric = /^\d+$/.test(rightIdentifier);
+    if (leftNumeric && rightNumeric) return Number(leftIdentifier) - Number(rightIdentifier);
+    if (leftNumeric) return -1;
+    if (rightNumeric) return 1;
+    return leftIdentifier.localeCompare(rightIdentifier);
   }
   return 0;
 }

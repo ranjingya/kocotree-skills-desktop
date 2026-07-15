@@ -62,6 +62,23 @@ describe("MockSkillApi", () => {
     });
   });
 
+  it("按照 SemVer 规则比较预发布版本", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    await api.signIn();
+    const target = (await api.listSkills()).items.find((skill) => skill.skillName === "code-review");
+    expect(target).toBeDefined();
+    const inspection = await api.inspectUpload(new File(["zip-content"], "code-review.zip"));
+
+    await expect(api.publishSkillVersion(target!.id, {
+      uploadId: inspection.uploadId,
+      version: `${target!.latestVersion.version}-alpha.1`,
+      changelog: "预发布版本比较测试",
+    })).rejects.toSatisfy((reason: unknown) => {
+      expectApiError(reason, "VERSION_NOT_GREATER");
+      return true;
+    });
+  });
+
   it("限制非原上传者修改平台信息", async () => {
     const api = new MockSkillApi({ delayMs: 0 });
     const user = await api.signIn();
