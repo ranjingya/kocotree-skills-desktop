@@ -43,6 +43,7 @@
 | 发起或轮询设备授权 | 是 |
 | 获取当前用户 | 否 |
 | 解析 ZIP、创建 Skill、发布版本 | 否 |
+| 修改 Skill 平台信息和 Tag | 否，仅原上传者可操作 |
 | 获取下载地址、上报安装成功 | 否 |
 
 匿名用户触发受保护动作时，客户端先完成设备授权，再重放原动作。
@@ -64,7 +65,6 @@
 | 字段 | 类型 | 必返 | 说明 |
 | --- | --- | --- | --- |
 | `id` | `string` | 是 | Tag UUID。 |
-| `slug` | `string` | 是 | 稳定 URL 标识。 |
 | `name` | `string` | 是 | Tag 展示名。 |
 
 ### 4.3 SkillSummary
@@ -72,17 +72,17 @@
 | 字段 | 类型 | 必返 | 说明 |
 | --- | --- | --- | --- |
 | `id` | `string` | 是 | Skill UUID。 |
-| `slug` | `string` | 是 | 可读标识。 |
-| `internalName` | `string` | 是 | `SKILL.md` 内部名称，全局唯一且不可修改。 |
+| `skillName` | `string` | 是 | `SKILL.md` 中的名称，全局唯一且不可修改。 |
 | `displayName` | `string` | 是 | 平台展示名称。 |
-| `summary` | `string` | 是 | 平台简介。 |
+| `skillDescription` | `string` | 是 | 最新版本 `SKILL.md` 中的描述。 |
+| `displayDescription` | `string` | 是 | 平台展示简介。 |
 | `tags` | `Tag[]` | 是 | 最多 5 个。 |
 | `latestVersion` | `SkillVersionSummary` | 是 | 最新版本摘要。 |
-| `createdBy` | `User` | 是 | 创建者。 |
-| `updatedBy` | `User` | 是 | 最近版本发布者。 |
+| `uploadedBy` | `User` | 是 | 首次上传并创建 Skill 的用户。 |
+| `updatedBy` | `User` | 是 | 最近修改平台信息或发布新版本的用户。 |
 | `installCount` | `number` | 是 | 成功安装操作总数。 |
 | `createdAt` | `string` | 是 | 创建时间。 |
-| `updatedAt` | `string` | 是 | 最近更新时间。 |
+| `updatedAt` | `string` | 是 | 最近修改平台信息或发布新版本的时间。 |
 
 ### 4.4 SkillVersion
 
@@ -90,13 +90,15 @@
 | --- | --- | --- | --- |
 | `id` | `string` | 是 | 版本 UUID。 |
 | `version` | `string` | 是 | SemVer。 |
+| `skillName` | `string` | 是 | 该版本 `SKILL.md` 中的名称。 |
+| `skillDescription` | `string` | 是 | 该版本 `SKILL.md` 中的描述。 |
 | `changelog` | `string \| null` | 是 | 首版可以为空，更新版本必填。 |
 | `packageSize` | `number` | 是 | ZIP 字节数。 |
 | `packageSha256` | `string` | 是 | 原始 ZIP 哈希。 |
 | `contentHash` | `string` | 是 | 规范化目录内容哈希。 |
 | `skillMd` | `string` | 是 | 该版本原始 `SKILL.md` 快照。 |
 | `publishedAt` | `string` | 是 | 发布时间。 |
-| `createdBy` | `User` | 是 | 版本发布者。 |
+| `uploadedBy` | `User` | 是 | 版本上传者。 |
 
 ### 4.5 服务端与本地状态边界
 
@@ -213,30 +215,29 @@ GET /api/tags?q=代码
   "items": [
     {
       "id": "2bb6b0f2-96f9-49e1-8c2c-a92503171001",
-      "slug": "code-review",
       "name": "代码审查"
     }
   ]
 }
 ```
 
-发布请求可以提交已有或新的 Tag 名称。服务端负责规范化、去重和创建，不提供单独的新建 Tag 接口。
+创建 Skill 或修改平台信息时可以同时提交已有 Tag 编号和新 Tag 名称。服务端负责规范化、去重和创建，不提供单独的新建或重命名 Tag 接口。
 
 ## 7. Skill 查询
 
 ### 7.1 获取 Skill 列表
 
 ```http
-GET /api/skills?q=审查&tag=代码审查&sort=updated&page=1&pageSize=20
+GET /api/skills?q=审查&tagId=2bb6b0f2-96f9-49e1-8c2c-a92503171001&sort=updated&page=1&pageSize=20
 ```
 
 查询参数：
 
 | 参数 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
-| `q` | `string` | 无 | 搜索展示名称、平台简介、内部名称和 Tag。 |
-| `tag` | `string` | 无 | 单个 Tag 名称或 slug。 |
-| `sort` | `created \| updated \| popular` | `updated` | 创建时间、更新时间或安装次数倒序。 |
+| `q` | `string` | 无 | 搜索 Skill 名称、展示名称、Skill 描述、展示简介和 Tag。 |
+| `tagId` | `string` | 无 | 单个 Tag UUID。 |
+| `sort` | `created \| updated \| popular` | `updated` | 创建时间、最新版本发布时间或安装次数倒序。 |
 | `page` | `number` | `1` | 页码。 |
 | `pageSize` | `number` | `20` | 每页数量，最大 50。 |
 
@@ -247,23 +248,24 @@ GET /api/skills?q=审查&tag=代码审查&sort=updated&page=1&pageSize=20
   "items": [
     {
       "id": "0c9c2f8d-3e84-4c0c-8a15-d41d87fd1001",
-      "slug": "code-review",
-      "internalName": "code-review",
+      "skillName": "code-review",
       "displayName": "代码审查助手",
-      "summary": "按照团队规范检查代码变更。",
+      "skillDescription": "Review code changes against project rules.",
+      "displayDescription": "按照团队规范检查代码变更。",
       "tags": [
         {
           "id": "2bb6b0f2-96f9-49e1-8c2c-a92503171001",
-          "slug": "code-review",
           "name": "代码审查"
         }
       ],
       "latestVersion": {
         "id": "8b37c0a5-f1c9-4f4e-a71b-b6f06f671001",
         "version": "1.4.2",
+        "skillName": "code-review",
+        "skillDescription": "Review code changes against project rules.",
         "packageSize": 12042,
         "publishedAt": "2026-07-15T09:30:00.000Z",
-        "createdBy": {
+        "uploadedBy": {
           "id": "4e6ee36b-e6ed-4400-b304-89f22c0527d1",
           "name": "示例用户",
           "email": null,
@@ -271,7 +273,7 @@ GET /api/skills?q=审查&tag=代码审查&sort=updated&page=1&pageSize=20
           "status": "ACTIVE"
         }
       },
-      "createdBy": {
+      "uploadedBy": {
         "id": "4e6ee36b-e6ed-4400-b304-89f22c0527d1",
         "name": "示例用户",
         "email": null,
@@ -302,21 +304,22 @@ GET /api/skills?q=审查&tag=代码审查&sort=updated&page=1&pageSize=20
 GET /api/skills/{skillId}
 ```
 
-响应 `200` 在 `SkillSummary` 基础上增加：
+响应 `200` 包含完整 `SkillSummary`，并将 `latestVersion` 展开为完整版本信息：
 
 ```json
 {
-  "sourceDescription": "Review code changes against project rules.",
   "latestVersion": {
     "id": "8b37c0a5-f1c9-4f4e-a71b-b6f06f671001",
     "version": "1.4.2",
+    "skillName": "code-review",
+    "skillDescription": "Review code changes against project rules.",
     "changelog": "补充 TypeScript 检查规则",
     "packageSize": 12042,
     "packageSha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "contentHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "skillMd": "---\nname: code-review\ndescription: Review code changes.\n---\n",
     "publishedAt": "2026-07-15T09:30:00.000Z",
-    "createdBy": {
+    "uploadedBy": {
       "id": "4e6ee36b-e6ed-4400-b304-89f22c0527d1",
       "name": "示例用户",
       "email": null,
@@ -343,13 +346,15 @@ GET /api/skills/{skillId}/versions?page=1&pageSize=20
     {
       "id": "8b37c0a5-f1c9-4f4e-a71b-b6f06f671001",
       "version": "1.4.2",
+      "skillName": "code-review",
+      "skillDescription": "Review code changes against project rules.",
       "changelog": "补充 TypeScript 检查规则",
       "packageSize": 12042,
       "packageSha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "contentHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "skillMd": "---\nname: code-review\n---\n",
       "publishedAt": "2026-07-15T09:30:00.000Z",
-      "createdBy": {
+      "uploadedBy": {
         "id": "4e6ee36b-e6ed-4400-b304-89f22c0527d1",
         "name": "示例用户",
         "email": null,
@@ -366,7 +371,7 @@ GET /api/skills/{skillId}/versions?page=1&pageSize=20
 
 版本按 SemVer 从高到低返回。
 
-## 8. 上传与发布
+## 8. 上传、发布与平台信息
 
 ### 8.1 解析 ZIP
 
@@ -385,8 +390,8 @@ FormData 只包含一个 `file` 字段。不要手动拼接 `Content-Type` 的 b
   "uploadId": "76ce8065-7ed1-4f18-9deb-50de699b5afe",
   "expiresAt": "2026-07-15T10:00:00.000Z",
   "originalFileName": "code-review.zip",
-  "internalName": "code-review",
-  "sourceDescription": "Review code changes against project rules.",
+  "skillName": "code-review",
+  "skillDescription": "Review code changes against project rules.",
   "skillMd": "---\nname: code-review\ndescription: Review code changes.\n---\n",
   "packageSize": 12042,
   "fileCount": 8,
@@ -412,16 +417,42 @@ Content-Type: application/json
 {
   "uploadId": "76ce8065-7ed1-4f18-9deb-50de699b5afe",
   "displayName": "代码审查助手",
-  "summary": "按照团队规范检查代码变更。",
-  "tags": ["代码审查", "TypeScript"],
+  "displayDescription": "按照团队规范检查代码变更。",
+  "tags": {
+    "tagIds": ["2bb6b0f2-96f9-49e1-8c2c-a92503171001"],
+    "newTagNames": ["TypeScript"]
+  },
   "version": "1.0.0",
   "changelog": "首次发布"
 }
 ```
 
-响应 `201` 为完整 `SkillDetail`。若内部名称已存在，返回 `409 DUPLICATE_INTERNAL_NAME`，并在 `details.skillId` 中提供现有 Skill 编号。
+响应 `201` 为完整 `SkillDetail`。若 Skill 名称已存在，返回 `409 DUPLICATE_SKILL_NAME`，并在 `details.skillId` 中提供现有 Skill 编号。
 
-### 8.3 发布新版本
+### 8.3 修改平台信息
+
+```http
+PATCH /api/skills/{skillId}
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+请求中的字段均可选，但至少提交一个字段：
+
+```json
+{
+  "displayName": "代码审查助手",
+  "displayDescription": "检查代码和配置变更。",
+  "tags": {
+    "tagIds": ["2bb6b0f2-96f9-49e1-8c2c-a92503171001"],
+    "newTagNames": ["Rust"]
+  }
+}
+```
+
+只有 Skill 的 `uploadedBy` 可以调用。`tags` 出现时表示完整替换 Skill 的 Tag 关联，`tagIds` 与 `newTagNames` 合并去重后最多 5 个。修改成功返回完整 `SkillDetail`，更新 `updatedBy` 和 `updatedAt`，但不创建 SkillVersion。其他登录用户返回 `403 NOT_SKILL_OWNER`。
+
+### 8.4 发布新版本
 
 ```http
 POST /api/skills/{skillId}/versions
@@ -435,14 +466,11 @@ Content-Type: application/json
 {
   "uploadId": "76ce8065-7ed1-4f18-9deb-50de699b5afe",
   "version": "1.5.0",
-  "changelog": "增加 Rust 项目审查规则",
-  "displayName": "代码审查助手",
-  "summary": "按照团队规范检查代码和配置变更。",
-  "tags": ["代码审查", "Rust"]
+  "changelog": "增加 Rust 项目审查规则"
 }
 ```
 
-`displayName`、`summary` 和 `tags` 可以缺省；缺省时保持当前平台信息。响应 `201` 为更新后的完整 `SkillDetail`。
+任意已登录用户都可以发布新版本。请求不接受 `displayName`、`displayDescription` 或 `tags`，响应 `201` 为更新后的完整 `SkillDetail`；Skill 的 `updatedBy` 更新为该版本上传者。
 
 校验失败：
 
@@ -451,10 +479,10 @@ Content-Type: application/json
 | 400 | `INVALID_SEMVER` | 版本号不是合法 SemVer。 |
 | 409 | `VERSION_ALREADY_EXISTS` | 相同版本号已存在。 |
 | 409 | `VERSION_NOT_GREATER` | 新版本没有高于当前最新版本。 |
-| 409 | `INTERNAL_NAME_MISMATCH` | ZIP 内部名称与目标 Skill 不一致。 |
+| 409 | `SKILL_NAME_MISMATCH` | ZIP 中的 Skill 名称与目标 Skill 不一致。 |
 | 410 | `UPLOAD_EXPIRED` | 临时上传已过期。 |
 
-`INTERNAL_NAME_MISMATCH` 的 `details` 返回 `expectedInternalName` 和 `actualInternalName`，客户端据此建议发布为新 Skill。
+`SKILL_NAME_MISMATCH` 的 `details` 返回 `expectedSkillName` 和 `actualSkillName`，客户端据此建议发布为新 Skill。
 
 ## 9. 下载与安装上报
 
@@ -520,11 +548,12 @@ Content-Type: application/json
 | 400 | `INVALID_SEMVER` | 版本号不是合法 SemVer。 |
 | 401 | `UNAUTHENTICATED` | Token 缺失、无效或过期。 |
 | 403 | `USER_DISABLED` | 当前用户被停用。 |
+| 403 | `NOT_SKILL_OWNER` | 当前用户不是 Skill 原上传者，不能修改平台信息。 |
 | 404 | `SKILL_NOT_FOUND` | Skill 不存在。 |
 | 404 | `VERSION_NOT_FOUND` | 版本不存在或不属于该 Skill。 |
 | 404 | `UPLOAD_NOT_FOUND` | 临时上传不存在。 |
-| 409 | `DUPLICATE_INTERNAL_NAME` | 内部名称已存在。 |
-| 409 | `INTERNAL_NAME_MISMATCH` | 更新包内部名称不匹配。 |
+| 409 | `DUPLICATE_SKILL_NAME` | Skill 名称已存在。 |
+| 409 | `SKILL_NAME_MISMATCH` | 更新包中的 Skill 名称不匹配。 |
 | 409 | `VERSION_ALREADY_EXISTS` | 版本号重复。 |
 | 409 | `VERSION_NOT_GREATER` | 版本号没有严格递增。 |
 | 409 | `UPLOAD_ALREADY_USED` | 临时上传已经完成发布。 |
@@ -546,34 +575,35 @@ export interface UserDto {
 
 export interface TagDto {
   id: string;
-  slug: string;
   name: string;
 }
 
 export interface SkillVersionDto {
   id: string;
   version: string;
+  skillName: string;
+  skillDescription: string;
   changelog: string | null;
   packageSize: number;
   packageSha256: string;
   contentHash: string;
   skillMd: string;
   publishedAt: string;
-  createdBy: UserDto;
+  uploadedBy: UserDto;
 }
 
 export interface SkillSummaryDto {
   id: string;
-  slug: string;
-  internalName: string;
+  skillName: string;
   displayName: string;
-  summary: string;
+  skillDescription: string;
+  displayDescription: string;
   tags: TagDto[];
   latestVersion: Omit<
     SkillVersionDto,
     "changelog" | "packageSha256" | "contentHash" | "skillMd"
   >;
-  createdBy: UserDto;
+  uploadedBy: UserDto;
   updatedBy: UserDto;
   installCount: number;
   createdAt: string;
@@ -581,16 +611,41 @@ export interface SkillSummaryDto {
 }
 
 export interface SkillDetailDto extends Omit<SkillSummaryDto, "latestVersion"> {
-  sourceDescription: string;
   latestVersion: SkillVersionDto;
+}
+
+export interface TagAssignmentDto {
+  tagIds: string[];
+  newTagNames: string[];
+}
+
+export interface CreateSkillDto {
+  uploadId: string;
+  displayName: string;
+  displayDescription: string;
+  tags: TagAssignmentDto;
+  version: string;
+  changelog?: string;
+}
+
+export interface UpdateSkillMetadataDto {
+  displayName?: string;
+  displayDescription?: string;
+  tags?: TagAssignmentDto;
+}
+
+export interface PublishSkillVersionDto {
+  uploadId: string;
+  version: string;
+  changelog: string;
 }
 
 export interface UploadInspectionDto {
   uploadId: string;
   expiresAt: string;
   originalFileName: string;
-  internalName: string;
-  sourceDescription: string;
+  skillName: string;
+  skillDescription: string;
   skillMd: string;
   packageSize: number;
   fileCount: number;
@@ -644,7 +699,7 @@ export interface LocalInstallationState {
   skillId: string;
   versionId: string;
   version: string;
-  internalName: string;
+  skillName: string;
   installPath: string;
   contentHash: string;
   installedAt: string;
@@ -660,8 +715,9 @@ export interface LocalInstallationState {
 - 正常列表、空列表、加载延迟和请求失败。
 - 匿名浏览与受保护动作触发登录。
 - ZIP 解析成功、包不合法和临时上传过期。
-- 创建 Skill、内部名称冲突和上传新版本。
-- SemVer 递增校验与内部名称不匹配。
+- 创建 Skill、Skill 名称冲突和上传新版本。
+- 原上传者修改平台信息、非原上传者被拒绝和 Tag 完整替换。
+- SemVer 递增校验与 Skill 名称不匹配。
 - 指定版本下载凭证与幂等安装事件。
 
 模拟阶段可以只保存元数据并返回虚拟下载地址，不执行真实文件上传或本地安装。

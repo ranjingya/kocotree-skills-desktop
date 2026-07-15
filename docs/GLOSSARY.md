@@ -4,12 +4,13 @@
 | --- | --- |
 | Skill | 由 `SKILL.md` 及可选脚本、参考资料等文件组成的能力包。 |
 | Skill 聚合 | 平台中由一个稳定 `skillId` 标识、包含多个不可变版本的 Skill 记录。 |
-| 内部名称（`internalName`） | `SKILL.md` frontmatter 中的 `name`。平台全局唯一，创建后不可修改，用于版本归属和本地目录名。 |
+| Skill 名称（`skillName`） | `SKILL.md` frontmatter 中的 `name`。平台全局唯一，创建后不可修改，用于版本归属和本地目录名。 |
 | 展示名称（`displayName`） | 平台界面使用的名称，可编辑、可重复，不写回 `SKILL.md`。 |
-| 原始描述（`sourceDescription`） | `SKILL.md` frontmatter 中的 `description`，随版本包保存。 |
-| 平台简介（`summary`） | 平台单独保存的简短说明，可编辑，不修改原始 ZIP。 |
-| Slug | 适合链接和展示的可读标识，不承担 Skill 的稳定身份。 |
-| Tag | 用于分类和筛选的标签。单个 Skill 最多 5 个，按规范名去重。 |
+| Skill 描述（`skillDescription`） | `SKILL.md` frontmatter 中的 `description`，随版本包保存；Skill 响应展示最新版本的值。 |
+| 展示简介（`displayDescription`） | 平台单独保存的简短说明，可编辑，不修改原始 ZIP。 |
+| Tag | 由稳定编号和展示名称组成、用于分类和筛选的标签。单个 Skill 最多 5 个，按规范名去重。 |
+| 原上传者（`uploadedBy`） | 对 Skill 表示首次上传并创建 Skill 的用户；对 SkillVersion 表示该版本的上传者。 |
+| 最近更新者（`updatedBy`） | 最近修改 Skill 平台信息或发布新版本的用户。 |
 | Skill 版本 | 由 SemVer、原始 ZIP、发布者、更新说明和哈希组成的不可变记录。 |
 | 最新版本 | 当前 Skill 中 SemVer 最高的已发布版本。安装历史版本不会改变它。 |
 | 上传会话 | ZIP 解析后生成的临时状态，通过 `uploadId` 与发布请求关联。 |

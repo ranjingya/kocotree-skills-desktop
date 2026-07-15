@@ -9,12 +9,12 @@
 
 ## 决策
 
-- 从 `SKILL.md` frontmatter 提取 `internalName` 和 `sourceDescription`。
-- `internalName` 是平台全局唯一身份，创建后不可修改。
-- 平台单独保存 `displayName`、`summary` 和 Tag。
-- 展示信息可编辑，但不写回 ZIP 或 `SKILL.md`。
+- 从 `SKILL.md` frontmatter 提取 `skillName` 和 `skillDescription`。
+- `skillName` 是平台全局唯一身份，创建后不可修改。
+- 平台单独保存 `displayName`、`displayDescription` 和 Tag。
+- 只有 Skill 原上传者可以修改展示信息和 Tag；修改不创建 SkillVersion，也不写回 ZIP 或 `SKILL.md`。
 - 原始 ZIP 与每个版本的 `SKILL.md` 快照不可变。
-- 发布新版本时，ZIP 内部名称必须与 Skill 聚合一致。
+- 发布新版本时，ZIP 中的 `skillName` 必须与 Skill 聚合一致，发布请求不能夹带平台信息字段。
 - 展示名称不参与版本匹配，也不决定本地目录。
 
 ## 结果
@@ -27,11 +27,11 @@
 
 ### 代价
 
-- 详情页需要同时解释展示名称和内部名称。
-- 平台简介与原始描述可能不同，接口必须清晰区分。
+- 详情页需要同时解释 Skill 名称和展示名称。
+- Skill 描述与展示简介可能不同，接口必须清晰区分。
 
 ## 后续约束
 
-- API 不得使用含义不明的单一 `name` 字段同时表示两种名称。
-- 创建和更新响应必须同时提供内部信息与平台信息。
-- 发现内部名称冲突时不得自动覆盖或合并。
+- API 不得使用含义不明的单一 `name` 或 `description` 字段同时表示两类信息。
+- 创建和更新响应必须同时提供 Skill 信息与平台信息。
+- 发现 Skill 名称冲突时不得自动覆盖或合并。

@@ -118,20 +118,20 @@ paths:
         - name: q
           in: query
           required: false
-          description: 搜索展示名称、平台简介、内部名称和 Tag
+          description: 搜索 Skill 名称、展示名称、Skill 描述、展示简介和 Tag
           schema:
             type: string
             maxLength: 200
-        - name: tag
+        - name: tagId
           in: query
           required: false
-          description: Tag 名称或 slug
+          description: Tag UUID
           schema:
-            type: string
-            maxLength: 100
+            $ref: '#/components/schemas/Uuid'
         - name: sort
           in: query
           required: false
+          description: created 按创建时间，updated 按最新版本发布时间，popular 按安装次数倒序。
           schema:
             type: string
             enum: [created, updated, popular]
@@ -192,6 +192,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SkillDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Skills]
+      summary: 修改 Skill 平台信息
+      description: 只有 Skill 原上传者可以修改展示名称、展示简介和 Tag；成功后不创建 SkillVersion。
+      operationId: updateSkillMetadata
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSkillMetadataRequest'
+      responses:
+        '200':
+          description: 平台信息已更新
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
   /skills/{skillId}/versions:
@@ -398,7 +426,7 @@ components:
           schema:
             $ref: '#/components/schemas/ApiError'
     Conflict:
-      description: 资源身份、内部名称或版本发生冲突
+      description: 资源身份、Skill 名称或版本发生冲突
       content:
         application/json:
           schema:
@@ -443,11 +471,12 @@ components:
             - INVALID_SEMVER
             - UNAUTHENTICATED
             - USER_DISABLED
+            - NOT_SKILL_OWNER
             - SKILL_NOT_FOUND
             - VERSION_NOT_FOUND
             - UPLOAD_NOT_FOUND
-            - DUPLICATE_INTERNAL_NAME
-            - INTERNAL_NAME_MISMATCH
+            - DUPLICATE_SKILL_NAME
+            - SKILL_NAME_MISMATCH
             - VERSION_ALREADY_EXISTS
             - VERSION_NOT_GREATER
             - UPLOAD_ALREADY_USED
@@ -483,33 +512,36 @@ components:
     Tag:
       type: object
       additionalProperties: false
-      required: [id, slug, name]
+      required: [id, name]
       properties:
         id:
           $ref: '#/components/schemas/Uuid'
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 100
         name:
           type: string
           minLength: 1
           maxLength: 50
     SkillVersionSummary:
       type: object
-      required: [id, version, packageSize, publishedAt, createdBy]
+      required: [id, version, skillName, skillDescription, packageSize, publishedAt, uploadedBy]
       properties:
         id:
           $ref: '#/components/schemas/Uuid'
         version:
           $ref: '#/components/schemas/SemVer'
+        skillName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        skillDescription:
+          type: string
+          minLength: 1
         packageSize:
           type: integer
           minimum: 1
           maximum: 52428800
         publishedAt:
           $ref: '#/components/schemas/DateTime'
-        createdBy:
+        uploadedBy:
           $ref: '#/components/schemas/User'
     SkillVersion:
       unevaluatedProperties: false
@@ -531,13 +563,13 @@ components:
       type: object
       required:
         - id
-        - slug
-        - internalName
+        - skillName
         - displayName
-        - summary
+        - skillDescription
+        - displayDescription
         - tags
         - latestVersion
-        - createdBy
+        - uploadedBy
         - updatedBy
         - installCount
         - createdAt
@@ -545,11 +577,7 @@ components:
       properties:
         id:
           $ref: '#/components/schemas/Uuid'
-        slug:
-          type: string
-          minLength: 1
-          maxLength: 120
-        internalName:
+        skillName:
           type: string
           minLength: 1
           maxLength: 100
@@ -557,7 +585,10 @@ components:
           type: string
           minLength: 1
           maxLength: 100
-        summary:
+        skillDescription:
+          type: string
+          minLength: 1
+        displayDescription:
           type: string
           minLength: 1
           maxLength: 300
@@ -569,7 +600,7 @@ components:
             $ref: '#/components/schemas/Tag'
         latestVersion:
           $ref: '#/components/schemas/SkillVersionSummary'
-        createdBy:
+        uploadedBy:
           $ref: '#/components/schemas/User'
         updatedBy:
           $ref: '#/components/schemas/User'
@@ -585,11 +616,8 @@ components:
       allOf:
         - $ref: '#/components/schemas/SkillSummary'
         - type: object
-          required: [sourceDescription, latestVersion]
+          required: [latestVersion]
           properties:
-            sourceDescription:
-              type: string
-              minLength: 1
             latestVersion:
               $ref: '#/components/schemas/SkillVersion'
     Pagination:
@@ -718,8 +746,8 @@ components:
         - uploadId
         - expiresAt
         - originalFileName
-        - internalName
-        - sourceDescription
+        - skillName
+        - skillDescription
         - skillMd
         - packageSize
         - fileCount
@@ -733,11 +761,11 @@ components:
           $ref: '#/components/schemas/DateTime'
         originalFileName:
           type: string
-        internalName:
+        skillName:
           type: string
           minLength: 1
           maxLength: 100
-        sourceDescription:
+        skillDescription:
           type: string
           minLength: 1
         skillMd:
@@ -761,7 +789,7 @@ components:
     CreateSkillRequest:
       type: object
       additionalProperties: false
-      required: [uploadId, displayName, summary, tags, version]
+      required: [uploadId, displayName, displayDescription, tags, version]
       properties:
         uploadId:
           $ref: '#/components/schemas/Uuid'
@@ -769,12 +797,12 @@ components:
           type: string
           minLength: 1
           maxLength: 100
-        summary:
+        displayDescription:
           type: string
           minLength: 1
           maxLength: 300
         tags:
-          $ref: '#/components/schemas/TagNames'
+          $ref: '#/components/schemas/TagAssignmentInput'
         version:
           $ref: '#/components/schemas/SemVer'
         changelog:
@@ -793,24 +821,41 @@ components:
           type: string
           minLength: 1
           maxLength: 2000
+    UpdateSkillMetadataRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
         displayName:
           type: string
           minLength: 1
           maxLength: 100
-        summary:
+        displayDescription:
           type: string
           minLength: 1
           maxLength: 300
         tags:
-          $ref: '#/components/schemas/TagNames'
-    TagNames:
-      type: array
-      maxItems: 5
-      uniqueItems: true
-      items:
-        type: string
-        minLength: 1
-        maxLength: 50
+          $ref: '#/components/schemas/TagAssignmentInput'
+    TagAssignmentInput:
+      type: object
+      additionalProperties: false
+      description: tagIds 与 newTagNames 合并、规范化和去重后最多 5 个 Tag。
+      required: [tagIds, newTagNames]
+      properties:
+        tagIds:
+          type: array
+          maxItems: 5
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Uuid'
+        newTagNames:
+          type: array
+          maxItems: 5
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 50
     DownloadTicket:
       type: object
       additionalProperties: false
