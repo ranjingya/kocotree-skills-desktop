@@ -1,6 +1,15 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { skillApi, SkillApiError, type SkillSummaryDto, type TagDto } from "./api";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Button, Modal, Toast } from "@douyinfe/semi-ui";
+import {
+  skillApi,
+  SkillApiError,
+  type SkillSummaryDto,
+  type SkillVersionDto,
+  type TagDto,
+  type UserDto,
+} from "./api";
 import { AppIcon } from "./components/AppIcon";
+import { SkillDetailSheet } from "./components/SkillDetailSheet";
 import "./App.css";
 
 type PageKey = "browse" | "upload";
@@ -308,9 +317,68 @@ function UploadPage() {
  */
 function App() {
   const [activePage, setActivePage] = useState<PageKey>("browse");
+  const [selectedSkill, setSelectedSkill] = useState<SkillSummaryDto | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
+  const [loginVisible, setLoginVisible] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const protectedActionRef = useRef<(() => void) | null>(null);
   const [installedSkillIds, setInstalledSkillIds] = useState(
     () => new Set(["0c9c2f8d-3e84-4c0c-8a15-d41d87fd1001", "0c9c2f8d-3e84-4c0c-8a15-d41d87fd1002"]),
   );
+
+  useEffect(() => {
+    skillApi.getCurrentUser().then(setCurrentUser).catch((reason: unknown) => {
+      console.error("[KocotreeSkills] 当前用户状态加载失败", reason);
+    });
+  }, []);
+
+  /**
+   * 功能说明：执行需要身份认证的操作，匿名状态下先保留动作并打开登录弹窗。
+   * @param action - 登录成功后需要继续执行的动作。
+   * @returns 无返回值。
+   */
+  function requireAuth(action: () => void): void {
+    if (currentUser) {
+      action();
+      return;
+    }
+    protectedActionRef.current = action;
+    setLoginVisible(true);
+  }
+
+  /**
+   * 功能说明：完成模拟飞书登录并继续此前被拦截的操作。
+   * @returns 无返回值。
+   */
+  async function handleSignIn(): Promise<void> {
+    setLoginLoading(true);
+    try {
+      const user = await skillApi.signIn();
+      setCurrentUser(user);
+      setLoginVisible(false);
+      Toast.success(`已以 ${user.name} 的身份登录`);
+      const nextAction = protectedActionRef.current;
+      protectedActionRef.current = null;
+      nextAction?.();
+    } catch (reason) {
+      console.error("[KocotreeSkills] 模拟登录失败", reason);
+      Toast.error("登录失败，请稍后重试");
+    } finally {
+      setLoginLoading(false);
+    }
+  }
+
+  async function handleSignOut(): Promise<void> {
+    try {
+      await skillApi.signOut();
+      setCurrentUser(null);
+      setActivePage("browse");
+      Toast.success("已退出登录");
+    } catch (reason) {
+      console.error("[KocotreeSkills] 退出登录失败", reason);
+      Toast.error("退出失败，请稍后重试");
+    }
+  }
 
   /**
    * 功能说明：切换指定 Skill 的本地安装演示状态。
@@ -318,24 +386,64 @@ function App() {
    * @returns 无返回值。
    */
   function handleInstall(skill: SkillSummaryDto): void {
-    setInstalledSkillIds((currentIds) => {
-      const nextIds = new Set(currentIds);
-      if (nextIds.has(skill.id)) {
-        console.info("[KocotreeSkills] Skill 已处于安装状态", { skillId: skill.id });
-        return nextIds;
-      }
-
-      console.info("[KocotreeSkills] 准备安装 Skill", {
-        skillId: skill.id,
-        target: "~/.agents/skills",
-      });
-      nextIds.add(skill.id);
-      return nextIds;
+    requireAuth(() => {
+      void installSkillVersion(skill, skill.latestVersion.id, skill.latestVersion.version);
     });
   }
 
   function handleOpenSkill(skill: SkillSummaryDto): void {
     console.info("[KocotreeSkills] 准备打开 Skill 详情", { skillId: skill.id });
+    setSelectedSkill(skill);
+  }
+
+  /**
+   * 功能说明：通过模拟下载凭证完成指定版本的安装与幂等上报。
+   * @param skill - 需要安装的 Skill。
+   * @param versionId - 需要安装的版本 UUID。
+   * @param version - 需要展示的 SemVer 版本号。
+   * @returns 无返回值。
+   */
+  async function installSkillVersion(
+    skill: SkillSummaryDto,
+    versionId: string,
+    version: string,
+  ): Promise<void> {
+    Toast.info(`正在准备 ${skill.displayName} v${version}`);
+    try {
+      const ticket = await skillApi.getDownloadTicket(skill.id, versionId);
+      console.info("[KocotreeSkills] 已获取模拟下载凭证", {
+        skillId: skill.id,
+        versionId,
+        packageSize: ticket.packageSize,
+        target: "~/.agents/skills",
+      });
+      const result = await skillApi.recordInstallation(skill.id, versionId, {
+        eventId: crypto.randomUUID(),
+        deviceId: "mock-windows-device",
+        platform: "windows",
+        clientVersion: "0.1.0",
+        installedAt: new Date().toISOString(),
+      });
+      setInstalledSkillIds((currentIds) => new Set(currentIds).add(skill.id));
+      Toast.success(`模拟安装完成，正式版将写入 ~/.agents/skills（累计 ${result.installCount} 次）`);
+    } catch (reason) {
+      console.error("[KocotreeSkills] Skill 模拟安装失败", reason);
+      Toast.error(reason instanceof SkillApiError ? reason.message : "安装失败，请稍后重试");
+    }
+  }
+
+  function handleInstallVersion(skill: SkillSummaryDto, version: SkillVersionDto): void {
+    requireAuth(() => {
+      void installSkillVersion(skill, version.id, version.version);
+    });
+  }
+
+  function handleUploadVersion(skill: SkillSummaryDto): void {
+    requireAuth(() => {
+      console.info("[KocotreeSkills] 进入新版本上传流程", { skillId: skill.id });
+      setSelectedSkill(null);
+      setActivePage("upload");
+    });
   }
 
   return (
@@ -358,20 +466,24 @@ function App() {
           <button
             className={activePage === "upload" ? "active" : ""}
             type="button"
-            onClick={() => setActivePage("upload")}
+            onClick={() => requireAuth(() => setActivePage("upload"))}
           >
             <AppIcon name="upload" size={20} />
             <span>上传 Skill</span>
           </button>
         </nav>
 
-        <div className="sidebar-footer">
-          <span className="connection-dot" />
-          <div>
-            <strong>本地开发模式</strong>
-            <small>服务端待接入</small>
-          </div>
-        </div>
+        {currentUser ? (
+          <button className="sidebar-user" type="button" onClick={() => void handleSignOut()} title="点击退出登录">
+            <span className="user-avatar">{currentUser.name.slice(0, 1)}</span>
+            <span><strong>{currentUser.name}</strong><small>模拟飞书用户 · 点击退出</small></span>
+          </button>
+        ) : (
+          <button className="sidebar-user" type="button" onClick={() => setLoginVisible(true)}>
+            <span className="connection-dot" />
+            <span><strong>未登录</strong><small>浏览无需登录 · 点击登录</small></span>
+          </button>
+        )}
       </aside>
 
       <div className="main-area">
@@ -381,6 +493,32 @@ function App() {
           <UploadPage />
         )}
       </div>
+
+      <SkillDetailSheet
+        skill={selectedSkill}
+        installedSkillIds={installedSkillIds}
+        onClose={() => setSelectedSkill(null)}
+        onInstall={handleInstallVersion}
+        onUploadVersion={handleUploadVersion}
+      />
+
+      <Modal
+        className="login-modal"
+        title="登录 Kocotree Skills"
+        visible={loginVisible}
+        onCancel={() => { protectedActionRef.current = null; setLoginVisible(false); }}
+        footer={null}
+        centered
+      >
+        <div className="login-content">
+          <span className="login-mark">飞</span>
+          <div><strong>使用飞书继续</strong><p>安装、上传和发布版本时需要记录操作者身份。</p></div>
+          <Button theme="solid" type="primary" loading={loginLoading} block onClick={() => void handleSignIn()}>
+            模拟飞书登录
+          </Button>
+          <small>当前为本地模拟流程，不会打开网页或提交真实账号信息。</small>
+        </div>
+      </Modal>
     </div>
   );
 }
