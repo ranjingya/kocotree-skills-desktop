@@ -10,7 +10,7 @@
 
 | 项目 | 约定 |
 | --- | --- |
-| 基础路径 | `/api/v1` |
+| 基础路径 | `/api` |
 | JSON 字段 | 英文 `camelCase` |
 | 时间 | ISO 8601 UTC，例如 `2026-07-15T09:30:00.000Z` |
 | 标识符 | 平台实体使用 UUID |
@@ -116,7 +116,7 @@
 ### 5.1 发起授权
 
 ```http
-POST /api/v1/auth/device/start
+POST /api/auth/device/start
 Content-Type: application/json
 ```
 
@@ -145,7 +145,7 @@ Content-Type: application/json
 ### 5.2 轮询授权
 
 ```http
-GET /api/v1/auth/device/poll?deviceCode=koco_device_xxx
+GET /api/auth/device/poll?deviceCode=koco_device_xxx
 ```
 
 等待中响应 `200`：
@@ -179,7 +179,7 @@ GET /api/v1/auth/device/poll?deviceCode=koco_device_xxx
 ### 5.3 当前用户
 
 ```http
-GET /api/v1/me
+GET /api/me
 Authorization: Bearer <token>
 ```
 
@@ -203,7 +203,7 @@ Authorization: Bearer <token>
 ### 6.1 获取 Tag 列表
 
 ```http
-GET /api/v1/tags?q=代码
+GET /api/tags?q=代码
 ```
 
 匿名可用。响应 `200`：
@@ -227,7 +227,7 @@ GET /api/v1/tags?q=代码
 ### 7.1 获取 Skill 列表
 
 ```http
-GET /api/v1/skills?q=审查&tag=代码审查&sort=updated&page=1&pageSize=20
+GET /api/skills?q=审查&tag=代码审查&sort=updated&page=1&pageSize=20
 ```
 
 查询参数：
@@ -299,7 +299,7 @@ GET /api/v1/skills?q=审查&tag=代码审查&sort=updated&page=1&pageSize=20
 ### 7.2 获取 Skill 详情
 
 ```http
-GET /api/v1/skills/{skillId}
+GET /api/skills/{skillId}
 ```
 
 响应 `200` 在 `SkillSummary` 基础上增加：
@@ -332,7 +332,7 @@ GET /api/v1/skills/{skillId}
 ### 7.3 获取版本历史
 
 ```http
-GET /api/v1/skills/{skillId}/versions?page=1&pageSize=20
+GET /api/skills/{skillId}/versions?page=1&pageSize=20
 ```
 
 响应 `200`：
@@ -371,7 +371,7 @@ GET /api/v1/skills/{skillId}/versions?page=1&pageSize=20
 ### 8.1 解析 ZIP
 
 ```http
-POST /api/v1/uploads/inspect
+POST /api/uploads/inspect
 Authorization: Bearer <token>
 Content-Type: multipart/form-data
 ```
@@ -401,7 +401,7 @@ FormData 只包含一个 `file` 字段。不要手动拼接 `Content-Type` 的 b
 ### 8.2 创建 Skill
 
 ```http
-POST /api/v1/skills
+POST /api/skills
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
@@ -424,7 +424,7 @@ Content-Type: application/json
 ### 8.3 发布新版本
 
 ```http
-POST /api/v1/skills/{skillId}/versions
+POST /api/skills/{skillId}/versions
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
@@ -461,7 +461,7 @@ Content-Type: application/json
 ### 9.1 获取指定版本下载凭证
 
 ```http
-GET /api/v1/skills/{skillId}/versions/{versionId}/download
+GET /api/skills/{skillId}/versions/{versionId}/download
 Authorization: Bearer <token>
 ```
 
@@ -482,7 +482,7 @@ Authorization: Bearer <token>
 ### 9.2 上报成功安装
 
 ```http
-POST /api/v1/skills/{skillId}/versions/{versionId}/install-events
+POST /api/skills/{skillId}/versions/{versionId}/install-events
 Authorization: Bearer <token>
 Content-Type: application/json
 ```

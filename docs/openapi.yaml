@@ -9,7 +9,7 @@ info:
     Kocotree Skills 首版客户端接口契约。当前仓库只实现模拟接口，
     本文件用于约束未来真实后端和生成 TypeScript DTO。
 servers:
-  - url: /api/v1
+  - url: /api
     description: 当前来源下的 API 根路径
 security: []
 tags:
