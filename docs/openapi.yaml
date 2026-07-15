@@ -1,0 +1,859 @@
+openapi: 3.1.0
+info:
+  title: Kocotree Skills API
+  version: 1.0.0
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+  description: |
+    Kocotree Skills 首版客户端接口契约。当前仓库只实现模拟接口，
+    本文件用于约束未来真实后端和生成 TypeScript DTO。
+servers:
+  - url: /api/v1
+    description: 当前来源下的 API 根路径
+security: []
+tags:
+  - name: Auth
+    description: 飞书设备授权与当前用户
+  - name: Tags
+    description: Tag 查询
+  - name: Skills
+    description: Skill 查询、发布与版本管理
+  - name: Uploads
+    description: ZIP 临时解析
+paths:
+  /auth/device/start:
+    post:
+      tags: [Auth]
+      summary: 发起设备授权
+      operationId: startDeviceAuthorization
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceAuthStartRequest'
+      responses:
+        '201':
+          description: 授权会话已创建
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceAuthStartResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /auth/device/poll:
+    get:
+      tags: [Auth]
+      summary: 轮询设备授权结果
+      operationId: pollDeviceAuthorization
+      parameters:
+        - name: deviceCode
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 当前授权状态
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/DeviceAuthPendingResponse'
+                  - $ref: '#/components/schemas/DeviceAuthAuthorizedResponse'
+                  - $ref: '#/components/schemas/DeviceAuthTerminalResponse'
+                discriminator:
+                  propertyName: status
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /me:
+    get:
+      tags: [Auth]
+      summary: 获取当前用户
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 当前用户和权限范围
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tags:
+    get:
+      tags: [Tags]
+      summary: 获取 Tag 列表
+      operationId: listTags
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: 按 Tag 名称模糊搜索
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: Tag 列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /skills:
+    get:
+      tags: [Skills]
+      summary: 获取 Skill 列表
+      operationId: listSkills
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: 搜索展示名称、平台简介、内部名称和 Tag
+          schema:
+            type: string
+            maxLength: 200
+        - name: tag
+          in: query
+          required: false
+          description: Tag 名称或 slug
+          schema:
+            type: string
+            maxLength: 100
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [created, updated, popular]
+            default: updated
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Skill 分页列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    post:
+      tags: [Skills]
+      summary: 创建 Skill
+      operationId: createSkill
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSkillRequest'
+      responses:
+        '201':
+          description: Skill 已创建
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '410':
+          $ref: '#/components/responses/Gone'
+  /skills/{skillId}:
+    parameters:
+      - $ref: '#/components/parameters/SkillId'
+    get:
+      tags: [Skills]
+      summary: 获取 Skill 详情
+      operationId: getSkill
+      responses:
+        '200':
+          description: Skill 详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /skills/{skillId}/versions:
+    parameters:
+      - $ref: '#/components/parameters/SkillId'
+    get:
+      tags: [Skills]
+      summary: 获取版本历史
+      operationId: listSkillVersions
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 按 SemVer 从高到低排列的版本列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillVersionListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Skills]
+      summary: 发布新版本
+      operationId: createSkillVersion
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSkillVersionRequest'
+      responses:
+        '201':
+          description: 新版本已发布
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '410':
+          $ref: '#/components/responses/Gone'
+  /skills/{skillId}/versions/{versionId}/download:
+    parameters:
+      - $ref: '#/components/parameters/SkillId'
+      - $ref: '#/components/parameters/VersionId'
+    get:
+      tags: [Skills]
+      summary: 获取指定版本下载凭证
+      operationId: getSkillVersionDownload
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 临时下载地址和校验信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadTicket'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /skills/{skillId}/versions/{versionId}/install-events:
+    parameters:
+      - $ref: '#/components/parameters/SkillId'
+      - $ref: '#/components/parameters/VersionId'
+    post:
+      tags: [Skills]
+      summary: 上报成功安装
+      operationId: recordSkillInstallation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstallationEventRequest'
+      responses:
+        '200':
+          description: 幂等安装事件处理结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallationEventResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /uploads/inspect:
+    post:
+      tags: [Uploads]
+      summary: 解析并校验 Skill ZIP
+      operationId: inspectSkillUpload
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 最大 50 MB 的 ZIP
+      responses:
+        '201':
+          description: ZIP 已解析并创建临时上传会话
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadInspection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Kocotree access token
+  parameters:
+    SkillId:
+      name: skillId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    VersionId:
+      name: versionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+  responses:
+    BadRequest:
+      description: 请求参数或业务校验失败
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: 未提供有效访问令牌
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: 当前用户被停用或无权执行操作
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: 请求的资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: 资源身份、内部名称或版本发生冲突
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Gone:
+      description: 临时上传已过期或已经使用
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ServiceUnavailable:
+      description: 下载服务暂时不可用
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+  schemas:
+    Uuid:
+      type: string
+      format: uuid
+    DateTime:
+      type: string
+      format: date-time
+    SemVer:
+      type: string
+      pattern: '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'
+      examples: [1.2.0]
+    Sha256:
+      type: string
+      pattern: '^sha256:[a-f0-9]{64}$'
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          enum:
+            - INVALID_REQUEST
+            - INVALID_SKILL_PACKAGE
+            - PACKAGE_TOO_LARGE
+            - INVALID_SEMVER
+            - UNAUTHENTICATED
+            - USER_DISABLED
+            - SKILL_NOT_FOUND
+            - VERSION_NOT_FOUND
+            - UPLOAD_NOT_FOUND
+            - DUPLICATE_INTERNAL_NAME
+            - INTERNAL_NAME_MISMATCH
+            - VERSION_ALREADY_EXISTS
+            - VERSION_NOT_GREATER
+            - UPLOAD_ALREADY_USED
+            - UPLOAD_EXPIRED
+            - DOWNLOAD_UNAVAILABLE
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+        requestId:
+          type: string
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, name, email, avatarUrl, status]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: [string, 'null']
+          format: email
+        avatarUrl:
+          type: [string, 'null']
+          format: uri
+        status:
+          type: string
+          enum: [ACTIVE, DISABLED]
+    Tag:
+      type: object
+      additionalProperties: false
+      required: [id, slug, name]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+    SkillVersionSummary:
+      type: object
+      required: [id, version, packageSize, publishedAt, createdBy]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        version:
+          $ref: '#/components/schemas/SemVer'
+        packageSize:
+          type: integer
+          minimum: 1
+          maximum: 52428800
+        publishedAt:
+          $ref: '#/components/schemas/DateTime'
+        createdBy:
+          $ref: '#/components/schemas/User'
+    SkillVersion:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/SkillVersionSummary'
+        - type: object
+          required: [changelog, packageSha256, contentHash, skillMd]
+          properties:
+            changelog:
+              type: [string, 'null']
+              maxLength: 2000
+            packageSha256:
+              $ref: '#/components/schemas/Sha256'
+            contentHash:
+              $ref: '#/components/schemas/Sha256'
+            skillMd:
+              type: string
+    SkillSummary:
+      type: object
+      required:
+        - id
+        - slug
+        - internalName
+        - displayName
+        - summary
+        - tags
+        - latestVersion
+        - createdBy
+        - updatedBy
+        - installCount
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 120
+        internalName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 300
+        tags:
+          type: array
+          maxItems: 5
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Tag'
+        latestVersion:
+          $ref: '#/components/schemas/SkillVersionSummary'
+        createdBy:
+          $ref: '#/components/schemas/User'
+        updatedBy:
+          $ref: '#/components/schemas/User'
+        installCount:
+          type: integer
+          minimum: 0
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
+        updatedAt:
+          $ref: '#/components/schemas/DateTime'
+    SkillDetail:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/SkillSummary'
+        - type: object
+          required: [sourceDescription, latestVersion]
+          properties:
+            sourceDescription:
+              type: string
+              minLength: 1
+            latestVersion:
+              $ref: '#/components/schemas/SkillVersion'
+    Pagination:
+      type: object
+      required: [total, page, pageSize]
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 50
+    SkillListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/SkillSummary'
+    SkillVersionListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/SkillVersion'
+    TagListResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+    DeviceAuthStartRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        clientName:
+          type: string
+          maxLength: 100
+        deviceName:
+          type: string
+          maxLength: 100
+        platform:
+          type: string
+          enum: [windows, macos, linux]
+    DeviceAuthStartResponse:
+      type: object
+      additionalProperties: false
+      required: [deviceCode, userCode, verificationUrl, expiresAt, pollInterval]
+      properties:
+        deviceCode:
+          type: string
+        userCode:
+          type: string
+        verificationUrl:
+          type: string
+          format: uri
+        expiresAt:
+          $ref: '#/components/schemas/DateTime'
+        pollInterval:
+          type: integer
+          minimum: 1
+    DeviceAuthPendingResponse:
+      type: object
+      additionalProperties: false
+      required: [status, pollInterval]
+      properties:
+        status:
+          type: string
+          const: PENDING
+        pollInterval:
+          type: integer
+          minimum: 1
+    DeviceAuthAuthorizedResponse:
+      type: object
+      additionalProperties: false
+      required: [status, user, token, expiresAt]
+      properties:
+        status:
+          type: string
+          const: AUTHORIZED
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+        expiresAt:
+          type: [string, 'null']
+          format: date-time
+    DeviceAuthTerminalResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [EXPIRED, DENIED, EXCHANGED]
+    CurrentUserResponse:
+      type: object
+      additionalProperties: false
+      required: [user, scopes]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        scopes:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+    UploadInspection:
+      type: object
+      additionalProperties: false
+      required:
+        - uploadId
+        - expiresAt
+        - originalFileName
+        - internalName
+        - sourceDescription
+        - skillMd
+        - packageSize
+        - fileCount
+        - packageSha256
+        - contentHash
+        - warnings
+      properties:
+        uploadId:
+          $ref: '#/components/schemas/Uuid'
+        expiresAt:
+          $ref: '#/components/schemas/DateTime'
+        originalFileName:
+          type: string
+        internalName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        sourceDescription:
+          type: string
+          minLength: 1
+        skillMd:
+          type: string
+        packageSize:
+          type: integer
+          minimum: 1
+          maximum: 52428800
+        fileCount:
+          type: integer
+          minimum: 1
+          maximum: 2000
+        packageSha256:
+          $ref: '#/components/schemas/Sha256'
+        contentHash:
+          $ref: '#/components/schemas/Sha256'
+        warnings:
+          type: array
+          items:
+            type: string
+    CreateSkillRequest:
+      type: object
+      additionalProperties: false
+      required: [uploadId, displayName, summary, tags, version]
+      properties:
+        uploadId:
+          $ref: '#/components/schemas/Uuid'
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 300
+        tags:
+          $ref: '#/components/schemas/TagNames'
+        version:
+          $ref: '#/components/schemas/SemVer'
+        changelog:
+          type: string
+          maxLength: 2000
+    CreateSkillVersionRequest:
+      type: object
+      additionalProperties: false
+      required: [uploadId, version, changelog]
+      properties:
+        uploadId:
+          $ref: '#/components/schemas/Uuid'
+        version:
+          $ref: '#/components/schemas/SemVer'
+        changelog:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 300
+        tags:
+          $ref: '#/components/schemas/TagNames'
+    TagNames:
+      type: array
+      maxItems: 5
+      uniqueItems: true
+      items:
+        type: string
+        minLength: 1
+        maxLength: 50
+    DownloadTicket:
+      type: object
+      additionalProperties: false
+      required: [url, expiresAt, packageSize, packageSha256, contentHash]
+      properties:
+        url:
+          type: string
+          format: uri
+        expiresAt:
+          $ref: '#/components/schemas/DateTime'
+        packageSize:
+          type: integer
+          minimum: 1
+          maximum: 52428800
+        packageSha256:
+          $ref: '#/components/schemas/Sha256'
+        contentHash:
+          $ref: '#/components/schemas/Sha256'
+    InstallationEventRequest:
+      type: object
+      additionalProperties: false
+      required: [eventId, deviceId, platform, clientVersion, installedAt]
+      properties:
+        eventId:
+          $ref: '#/components/schemas/Uuid'
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 200
+        platform:
+          type: string
+          enum: [windows, macos, linux]
+        clientVersion:
+          $ref: '#/components/schemas/SemVer'
+        installedAt:
+          $ref: '#/components/schemas/DateTime'
+    InstallationEventResponse:
+      type: object
+      additionalProperties: false
+      required: [recorded, installCount]
+      properties:
+        recorded:
+          type: boolean
+        installCount:
+          type: integer
+          minimum: 0
