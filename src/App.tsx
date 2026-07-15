@@ -1,45 +1,18 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { skillApi, SkillApiError, type SkillSummaryDto, type TagDto } from "./api";
 import { AppIcon } from "./components/AppIcon";
-import { mockSkills } from "./data/mockSkills";
-import type { SkillRecord } from "./types/skill";
 import "./App.css";
 
 type PageKey = "browse" | "upload";
-type SortKey = "all" | "recent" | "popular";
+type SortKey = "created" | "updated" | "popular";
 
-/**
- * 功能说明：根据关键词、来源和排序方式生成技能浏览列表。
- * @param skills - 需要处理的技能原始列表。
- * @param query - 用户输入的搜索关键词。
- * @param source - 当前选择的技能来源，all 表示全部来源。
- * @param sort - 当前选择的排序方式。
- * @returns 筛选并排序后的新技能列表。
- */
-function getVisibleSkills(
-  skills: SkillRecord[],
-  query: string,
-  source: string,
-  sort: SortKey,
-): SkillRecord[] {
-  const normalizedQuery = query.trim().toLocaleLowerCase();
-  const visibleSkills = skills.filter((skill) => {
-    const matchesSource = source === "all" || skill.author === source;
-    const searchableText = [skill.name, skill.description, skill.author, ...skill.tags]
-      .join(" ")
-      .toLocaleLowerCase();
+const logoTones = ["dark", "blue", "orange", "violet", "green"] as const;
 
-    return matchesSource && searchableText.includes(normalizedQuery);
-  });
-
-  if (sort === "popular") {
-    return [...visibleSkills].sort((a, b) => b.downloads - a.downloads);
-  }
-
-  if (sort === "recent") {
-    return [...visibleSkills].reverse();
-  }
-
-  return visibleSkills;
+function getSkillShortCode(skill: SkillSummaryDto): string {
+  const words = skill.skillName.split("-").filter(Boolean);
+  return words.length > 1
+    ? words.slice(0, 2).map((word) => word[0]).join("").toLocaleUpperCase()
+    : skill.skillName.slice(0, 2).toLocaleUpperCase();
 }
 
 /**
@@ -53,38 +26,41 @@ function SkillCard({
   skill,
   installed,
   onInstall,
+  onOpen,
 }: {
-  skill: SkillRecord;
+  skill: SkillSummaryDto;
   installed: boolean;
-  onInstall: (skill: SkillRecord) => void;
+  onInstall: (skill: SkillSummaryDto) => void;
+  onOpen: (skill: SkillSummaryDto) => void;
 }) {
+  const tone = logoTones[skill.skillName.length % logoTones.length];
   return (
-    <article className="skill-card">
+    <article className="skill-card" onClick={() => onOpen(skill)}>
       <div className="skill-card-topline">
         <div className="skill-title-group">
-          <span className={`skill-logo skill-logo-${skill.logoTone}`}>
-            {skill.shortCode}
+          <span className={`skill-logo skill-logo-${tone}`}>
+            {getSkillShortCode(skill)}
           </span>
-          <strong title={skill.name}>{skill.name}</strong>
+          <strong title={skill.displayName}>{skill.displayName}</strong>
         </div>
-        <button className="icon-button external-button" type="button" aria-label="查看 Skill 详情">
+        <button className="icon-button external-button" type="button" aria-label="查看 Skill 详情" onClick={(event) => { event.stopPropagation(); onOpen(skill); }}>
           <AppIcon name="external" size={17} />
         </button>
       </div>
 
-      <p className="skill-description">{skill.description}</p>
+      <p className="skill-description">{skill.displayDescription}</p>
 
       <div className="skill-card-meta">
-        <span className="source-badge">@{skill.author}</span>
+        <span className="source-badge">@{skill.uploadedBy.name}</span>
         <span className="download-count">
           <AppIcon name="download" size={14} />
-          {skill.downloads.toLocaleString("zh-CN")}
+          {skill.installCount.toLocaleString("zh-CN")}
         </span>
         <button
           className={installed ? "install-button installed" : "install-button"}
           type="button"
-          onClick={() => onInstall(skill)}
-          aria-label={installed ? `${skill.name} 已安装` : `安装 ${skill.name}`}
+          onClick={(event) => { event.stopPropagation(); onInstall(skill); }}
+          aria-label={installed ? `${skill.displayName} 已安装` : `安装 ${skill.displayName}`}
         >
           <AppIcon name={installed ? "check" : "plus"} size={17} />
         </button>
@@ -102,21 +78,48 @@ function SkillCard({
 function BrowsePage({
   installedSkillIds,
   onInstall,
+  onOpen,
 }: {
   installedSkillIds: Set<string>;
-  onInstall: (skill: SkillRecord) => void;
+  onInstall: (skill: SkillSummaryDto) => void;
+  onOpen: (skill: SkillSummaryDto) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [source, setSource] = useState("all");
-  const [sort, setSort] = useState<SortKey>("all");
-  const sources = useMemo(
-    () => Array.from(new Set(mockSkills.map((skill) => skill.author))),
-    [],
-  );
-  const visibleSkills = useMemo(
-    () => getVisibleSkills(mockSkills, query, source, sort),
-    [query, source, sort],
-  );
+  const [tagId, setTagId] = useState("all");
+  const [sort, setSort] = useState<SortKey>("updated");
+  const [skills, setSkills] = useState<SkillSummaryDto[]>([]);
+  const [tags, setTags] = useState<TagDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    skillApi.listTags().then((items) => {
+      if (active) setTags(items);
+    }).catch((reason: unknown) => {
+      console.error("[KocotreeSkills] Tag 加载失败", reason);
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      setError("");
+      skillApi.listSkills({ q: query || undefined, tagId: tagId === "all" ? undefined : tagId, sort })
+        .then((result) => {
+          if (active) setSkills(result.items);
+        })
+        .catch((reason: unknown) => {
+          if (!active) return;
+          console.error("[KocotreeSkills] Skill 列表加载失败", reason);
+          setError(reason instanceof SkillApiError ? reason.message : "列表加载失败，请稍后重试");
+        })
+        .finally(() => { if (active) setLoading(false); });
+    }, 180);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [query, sort, tagId]);
 
   return (
     <main className="page-content">
@@ -128,18 +131,18 @@ function BrowsePage({
         <div className="filter-first-row">
           <div className="sort-tabs" role="tablist" aria-label="排序方式">
             <button
-              className={sort === "all" ? "active" : ""}
+              className={sort === "updated" ? "active" : ""}
               type="button"
-              onClick={() => setSort("all")}
+              onClick={() => setSort("updated")}
             >
-              <AppIcon name="clock" size={16} />全部
+              <AppIcon name="clock" size={16} />最近更新
             </button>
             <button
-              className={sort === "recent" ? "active" : ""}
+              className={sort === "created" ? "active" : ""}
               type="button"
-              onClick={() => setSort("recent")}
+              onClick={() => setSort("created")}
             >
-              <AppIcon name="trend" size={16} />最近更新
+              <AppIcon name="trend" size={16} />最近创建
             </button>
             <button
               className={sort === "popular" ? "active" : ""}
@@ -161,35 +164,40 @@ function BrowsePage({
         </div>
 
         <div className="source-row">
-          <span>来源</span>
+          <span>标签</span>
           <button
-            className={source === "all" ? "source-chip active" : "source-chip"}
+            className={tagId === "all" ? "source-chip active" : "source-chip"}
             type="button"
-            onClick={() => setSource("all")}
+            onClick={() => setTagId("all")}
           >
-            全部来源
+            全部标签
           </button>
-          {sources.map((item) => (
+          {tags.map((item) => (
             <button
-              className={source === item ? "source-chip active" : "source-chip"}
+              className={tagId === item.id ? "source-chip active" : "source-chip"}
               type="button"
-              key={item}
-              onClick={() => setSource(item)}
+              key={item.id}
+              onClick={() => setTagId(item.id)}
             >
-              @{item}
+              {item.name}
             </button>
           ))}
         </div>
       </section>
 
-      {visibleSkills.length > 0 ? (
+      {loading ? (
+        <section className="empty-state"><span className="loading-dot" /><strong>正在加载 Skill</strong></section>
+      ) : error ? (
+        <section className="empty-state"><strong>暂时无法加载</strong><span>{error}</span></section>
+      ) : skills.length > 0 ? (
         <section className="skill-grid" aria-label="Skill 列表">
-          {visibleSkills.map((skill) => (
+          {skills.map((skill) => (
             <SkillCard
               key={skill.id}
               skill={skill}
               installed={installedSkillIds.has(skill.id)}
               onInstall={onInstall}
+              onOpen={onOpen}
             />
           ))}
         </section>
@@ -301,7 +309,7 @@ function UploadPage() {
 function App() {
   const [activePage, setActivePage] = useState<PageKey>("browse");
   const [installedSkillIds, setInstalledSkillIds] = useState(
-    () => new Set(mockSkills.filter((skill) => skill.installed).map((skill) => skill.id)),
+    () => new Set(["0c9c2f8d-3e84-4c0c-8a15-d41d87fd1001", "0c9c2f8d-3e84-4c0c-8a15-d41d87fd1002"]),
   );
 
   /**
@@ -309,7 +317,7 @@ function App() {
    * @param skill - 用户点击安装按钮的 Skill。
    * @returns 无返回值。
    */
-  function handleInstall(skill: SkillRecord): void {
+  function handleInstall(skill: SkillSummaryDto): void {
     setInstalledSkillIds((currentIds) => {
       const nextIds = new Set(currentIds);
       if (nextIds.has(skill.id)) {
@@ -324,6 +332,10 @@ function App() {
       nextIds.add(skill.id);
       return nextIds;
     });
+  }
+
+  function handleOpenSkill(skill: SkillSummaryDto): void {
+    console.info("[KocotreeSkills] 准备打开 Skill 详情", { skillId: skill.id });
   }
 
   return (
@@ -364,7 +376,7 @@ function App() {
 
       <div className="main-area">
         {activePage === "browse" ? (
-          <BrowsePage installedSkillIds={installedSkillIds} onInstall={handleInstall} />
+          <BrowsePage installedSkillIds={installedSkillIds} onInstall={handleInstall} onOpen={handleOpenSkill} />
         ) : (
           <UploadPage />
         )}
