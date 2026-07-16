@@ -7,7 +7,9 @@ export type AppIconName =
   | "hot"
   | "download"
   | "check"
-  | "plus";
+  | "plus"
+  | "folder"
+  | "file";
 
 const iconPaths: Record<AppIconName, React.ReactNode> = {
   browse: <><path d="M4 5.5h5v5H4zM15 5.5h5v5h-5zM4 15.5h5v5H4zM15 15.5h5v5h-5z" /></>,
@@ -19,6 +21,8 @@ const iconPaths: Record<AppIconName, React.ReactNode> = {
   download: <><path d="M12 4v10m0 0 4-4m-4 4-4-4" /><path d="M5 18.5h14" /></>,
   check: <><path d="m5 12.5 4.2 4.2L19 7" /></>,
   plus: <><path d="M12 5v14M5 12h14" /></>,
+  folder: <><path d="M3.5 7.5h6l2-2h9v13h-17z" /></>,
+  file: <><path d="M6.5 3.5h7l4 4v13h-11z" /><path d="M13.5 3.5v4h4" /></>,
 };
 
 /**

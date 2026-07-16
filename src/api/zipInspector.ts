@@ -59,6 +59,9 @@ function getOriginalPath(entry: ZipObjectWithSize): string {
 }
 
 function validateArchivePath(path: string): string {
+  if (path.length > 1_024) {
+    return invalidPackage("ZIP 中的文件路径不能超过 1024 个字符", { path });
+  }
   if (!path || path.includes("\0") || path.includes("\\") || path.startsWith("/") || /^[A-Za-z]:/.test(path)) {
     return invalidPackage("ZIP 中包含不安全的文件路径", { path });
   }
@@ -109,7 +112,7 @@ function parseSkillFrontmatter(skillMd: string): { skillName: string; skillDescr
 
   let frontmatter: unknown;
   try {
-    frontmatter = parseYaml(match[1]);
+    frontmatter = parseYaml(match[1], { maxAliasCount: 50 });
   } catch {
     return invalidPackage("SKILL.md 的 YAML frontmatter 无法解析");
   }
