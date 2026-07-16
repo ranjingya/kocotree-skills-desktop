@@ -167,6 +167,7 @@ textarea:focus-visible,
 }
 
 .sidebar-user-area {
+  position: relative;
   margin-top: auto;
   padding-top: 10px;
   border-top: 1px solid var(--border);
@@ -229,7 +230,7 @@ textarea:focus-visible,
 }
 
 .sidebar-user-dropdown {
-  width: 206px;
+  width: var(--sidebar-user-popup-width);
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -246,7 +247,7 @@ textarea:focus-visible,
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px;
+  padding: 10px 9px;
   border-bottom: 1px solid var(--border);
 }
 

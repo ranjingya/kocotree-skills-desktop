@@ -243,6 +243,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
   const [loginVisible, setLoginVisible] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
+  const sidebarUserAreaRef = useRef<HTMLDivElement>(null);
   const protectedActionRef = useRef<(() => void) | null>(null);
   const [installedSkillIds, setInstalledSkillIds] = useState(
     () => new Set(["0c9c2f8d-3e84-4c0c-8a15-d41d87fd1001", "0c9c2f8d-3e84-4c0c-8a15-d41d87fd1002"]),
@@ -252,6 +253,20 @@ function App() {
     skillApi.getCurrentUser().then(setCurrentUser).catch((reason: unknown) => {
       console.error("[KocotreeSkills] 当前用户状态加载失败", reason);
     });
+  }, []);
+
+  useEffect(() => {
+    const userArea = sidebarUserAreaRef.current;
+    if (!userArea) {
+      return;
+    }
+    const syncPopupWidth = () => {
+      userArea.style.setProperty("--sidebar-user-popup-width", `${userArea.getBoundingClientRect().width}px`);
+    };
+    syncPopupWidth();
+    const resizeObserver = new ResizeObserver(syncPopupWidth);
+    resizeObserver.observe(userArea);
+    return () => resizeObserver.disconnect();
   }, []);
 
   /**
@@ -405,10 +420,11 @@ function App() {
           </button>
         </nav>
 
-        <div className="sidebar-user-area">
+        <div className="sidebar-user-area" ref={sidebarUserAreaRef}>
           {currentUser ? (
             <Dropdown
               contentClassName="sidebar-user-dropdown"
+              getPopupContainer={() => sidebarUserAreaRef.current ?? document.body}
               position="top"
               trigger="click"
               render={(
