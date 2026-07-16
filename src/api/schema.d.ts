@@ -133,6 +133,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/skills/{skillId}/versions/{versionId}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: components["parameters"]["SkillId"];
+                versionId: components["parameters"]["VersionId"];
+            };
+            cookie?: never;
+        };
+        /** 获取指定版本文件树 */
+        get: operations["listSkillVersionFiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/skills/{skillId}/versions/{versionId}/files/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: components["parameters"]["SkillId"];
+                versionId: components["parameters"]["VersionId"];
+            };
+            cookie?: never;
+        };
+        /** 获取指定文本文件内容 */
+        get: operations["getSkillVersionFileContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/skills/{skillId}/versions/{versionId}/download": {
         parameters: {
             query?: never;
@@ -203,7 +243,7 @@ export interface components {
         Sha256: string;
         ApiError: {
             /** @enum {string} */
-            error: "INVALID_REQUEST" | "INVALID_SKILL_PACKAGE" | "PACKAGE_TOO_LARGE" | "INVALID_SEMVER" | "UNAUTHENTICATED" | "USER_DISABLED" | "NOT_SKILL_OWNER" | "SKILL_NOT_FOUND" | "VERSION_NOT_FOUND" | "UPLOAD_NOT_FOUND" | "DUPLICATE_SKILL_NAME" | "SKILL_NAME_MISMATCH" | "VERSION_ALREADY_EXISTS" | "VERSION_NOT_GREATER" | "UPLOAD_ALREADY_USED" | "UPLOAD_EXPIRED" | "DOWNLOAD_UNAVAILABLE";
+            error: "INVALID_REQUEST" | "INVALID_SKILL_PACKAGE" | "PACKAGE_TOO_LARGE" | "INVALID_SEMVER" | "UNAUTHENTICATED" | "USER_DISABLED" | "NOT_SKILL_OWNER" | "SKILL_NOT_FOUND" | "VERSION_NOT_FOUND" | "FILE_NOT_FOUND" | "FILE_PREVIEW_UNAVAILABLE" | "UPLOAD_NOT_FOUND" | "DUPLICATE_SKILL_NAME" | "SKILL_NAME_MISMATCH" | "VERSION_ALREADY_EXISTS" | "VERSION_NOT_GREATER" | "UPLOAD_ALREADY_USED" | "UPLOAD_EXPIRED" | "DOWNLOAD_UNAVAILABLE";
             message: string;
             details?: {
                 [key: string]: unknown;
@@ -238,6 +278,25 @@ export interface components {
             packageSha256: components["schemas"]["Sha256"];
             contentHash: components["schemas"]["Sha256"];
             skillMd: string;
+        };
+        SkillFileEntry: {
+            path: string;
+            /** @enum {string} */
+            type: "FILE" | "DIRECTORY";
+            size: number | null;
+            mediaType: string | null;
+            previewable: boolean;
+        };
+        SkillFileListResponse: {
+            items: components["schemas"]["SkillFileEntry"][];
+        };
+        SkillFileContent: {
+            path: string;
+            mediaType: string;
+            /** @constant */
+            encoding: "UTF-8";
+            size: number;
+            content: string;
         };
         SkillSummary: {
             id: components["schemas"]["Uuid"];
@@ -419,6 +478,15 @@ export interface components {
         };
         /** @description 临时上传已过期或已经使用 */
         Gone: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ApiError"];
+            };
+        };
+        /** @description 文件类型不支持文本预览 */
+        UnsupportedMediaType: {
             headers: {
                 [name: string]: unknown;
             };
@@ -713,6 +781,59 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             410: components["responses"]["Gone"];
+        };
+    };
+    listSkillVersionFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: components["parameters"]["SkillId"];
+                versionId: components["parameters"]["VersionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 规范化并按目录优先排序的文件条目 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillFileListResponse"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getSkillVersionFileContent: {
+        parameters: {
+            query: {
+                /** @description 文件树接口返回的规范化相对路径 */
+                path: string;
+            };
+            header?: never;
+            path: {
+                skillId: components["parameters"]["SkillId"];
+                versionId: components["parameters"]["VersionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description UTF-8 文本文件内容 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillFileContent"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            415: components["responses"]["UnsupportedMediaType"];
         };
     };
     getSkillVersionDownload: {

@@ -274,6 +274,53 @@ paths:
           $ref: '#/components/responses/Conflict'
         '410':
           $ref: '#/components/responses/Gone'
+  /skills/{skillId}/versions/{versionId}/files:
+    parameters:
+      - $ref: '#/components/parameters/SkillId'
+      - $ref: '#/components/parameters/VersionId'
+    get:
+      tags: [Skills]
+      summary: 获取指定版本文件树
+      operationId: listSkillVersionFiles
+      responses:
+        '200':
+          description: 规范化并按目录优先排序的文件条目
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillFileListResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /skills/{skillId}/versions/{versionId}/files/content:
+    parameters:
+      - $ref: '#/components/parameters/SkillId'
+      - $ref: '#/components/parameters/VersionId'
+    get:
+      tags: [Skills]
+      summary: 获取指定文本文件内容
+      operationId: getSkillVersionFileContent
+      parameters:
+        - name: path
+          in: query
+          required: true
+          description: 文件树接口返回的规范化相对路径
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 1024
+      responses:
+        '200':
+          description: UTF-8 文本文件内容
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillFileContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
   /skills/{skillId}/versions/{versionId}/download:
     parameters:
       - $ref: '#/components/parameters/SkillId'
@@ -437,6 +484,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
+    UnsupportedMediaType:
+      description: 文件类型不支持文本预览
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
     ServiceUnavailable:
       description: 下载服务暂时不可用
       content:
@@ -474,6 +527,8 @@ components:
             - NOT_SKILL_OWNER
             - SKILL_NOT_FOUND
             - VERSION_NOT_FOUND
+            - FILE_NOT_FOUND
+            - FILE_PREVIEW_UNAVAILABLE
             - UPLOAD_NOT_FOUND
             - DUPLICATE_SKILL_NAME
             - SKILL_NAME_MISMATCH
@@ -559,6 +614,54 @@ components:
               $ref: '#/components/schemas/Sha256'
             skillMd:
               type: string
+    SkillFileEntry:
+      type: object
+      additionalProperties: false
+      required: [path, type, size, mediaType, previewable]
+      properties:
+        path:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        type:
+          type: string
+          enum: [FILE, DIRECTORY]
+        size:
+          type: [integer, 'null']
+          minimum: 0
+        mediaType:
+          type: [string, 'null']
+        previewable:
+          type: boolean
+    SkillFileListResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 5000
+          items:
+            $ref: '#/components/schemas/SkillFileEntry'
+    SkillFileContent:
+      type: object
+      additionalProperties: false
+      required: [path, mediaType, encoding, size, content]
+      properties:
+        path:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        mediaType:
+          type: string
+        encoding:
+          type: string
+          const: UTF-8
+        size:
+          type: integer
+          minimum: 0
+        content:
+          type: string
     SkillSummary:
       type: object
       required:

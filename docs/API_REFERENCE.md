@@ -38,7 +38,7 @@
 
 | 接口 | 匿名可用 |
 | --- | --- |
-| 获取 Skill 列表、详情、版本历史 | 是 |
+| 获取 Skill 列表、详情、版本历史、版本文件树与文本预览 | 是 |
 | 获取 Tag 列表 | 是 |
 | 发起或轮询设备授权 | 是 |
 | 获取当前用户 | 否 |
@@ -371,6 +371,64 @@ GET /api/skills/{skillId}/versions?page=1&pageSize=20
 
 版本按 SemVer 从高到低返回。
 
+### 7.4 获取指定版本文件树
+
+```http
+GET /api/skills/{skillId}/versions/{versionId}/files
+```
+
+匿名可用。响应 `200`：
+
+```json
+{
+  "items": [
+    {
+      "path": "references",
+      "type": "DIRECTORY",
+      "size": null,
+      "mediaType": null,
+      "previewable": false
+    },
+    {
+      "path": "SKILL.md",
+      "type": "FILE",
+      "size": 2480,
+      "mediaType": "text/markdown",
+      "previewable": true
+    },
+    {
+      "path": "references/usage.md",
+      "type": "FILE",
+      "size": 1024,
+      "mediaType": "text/markdown",
+      "previewable": true
+    }
+  ]
+}
+```
+
+`path` 是去除单层外包装目录后的规范化相对路径。目录的 `size` 和 `mediaType` 为 `null`；普通文件的 `size` 是解压后的字节数。响应最多包含 5,000 个条目，并按路径稳定排序。
+
+### 7.5 获取指定文本文件内容
+
+```http
+GET /api/skills/{skillId}/versions/{versionId}/files/content?path=references%2Fusage.md
+```
+
+匿名可用。客户端只能传入文件树接口返回的 `path`。响应 `200`：
+
+```json
+{
+  "path": "references/usage.md",
+  "mediaType": "text/markdown",
+  "encoding": "UTF-8",
+  "size": 1024,
+  "content": "# 使用说明\n"
+}
+```
+
+接口按需读取单个文件，不在文件树响应中内嵌文件内容。二进制文件、无法按 UTF-8 解码的文件或超过预览上限的文件返回 `415 FILE_PREVIEW_UNAVAILABLE`；路径不存在返回 `404 FILE_NOT_FOUND`。
+
 ## 8. 上传、发布与平台信息
 
 ### 8.1 解析 ZIP
@@ -551,6 +609,7 @@ Content-Type: application/json
 | 403 | `NOT_SKILL_OWNER` | 当前用户不是 Skill 原上传者，不能修改平台信息。 |
 | 404 | `SKILL_NOT_FOUND` | Skill 不存在。 |
 | 404 | `VERSION_NOT_FOUND` | 版本不存在或不属于该 Skill。 |
+| 404 | `FILE_NOT_FOUND` | 文件不存在或不属于该版本。 |
 | 404 | `UPLOAD_NOT_FOUND` | 临时上传不存在。 |
 | 409 | `DUPLICATE_SKILL_NAME` | Skill 名称已存在。 |
 | 409 | `SKILL_NAME_MISMATCH` | 更新包中的 Skill 名称不匹配。 |
@@ -558,6 +617,7 @@ Content-Type: application/json
 | 409 | `VERSION_NOT_GREATER` | 版本号没有严格递增。 |
 | 409 | `UPLOAD_ALREADY_USED` | 临时上传已经完成发布。 |
 | 410 | `UPLOAD_EXPIRED` | 临时上传已过期。 |
+| 415 | `FILE_PREVIEW_UNAVAILABLE` | 文件不是可预览的 UTF-8 文本或超过预览上限。 |
 | 503 | `DOWNLOAD_UNAVAILABLE` | 暂时无法生成下载地址。 |
 
 ## 11. TypeScript DTO 示例
@@ -654,6 +714,26 @@ export interface UploadInspectionDto {
   warnings: string[];
 }
 
+export interface SkillFileEntryDto {
+  path: string;
+  type: "FILE" | "DIRECTORY";
+  size: number | null;
+  mediaType: string | null;
+  previewable: boolean;
+}
+
+export interface SkillFileListResponseDto {
+  items: SkillFileEntryDto[];
+}
+
+export interface SkillFileContentDto {
+  path: string;
+  mediaType: string;
+  encoding: "UTF-8";
+  size: number;
+  content: string;
+}
+
 export interface DownloadTicketDto {
   url: string;
   expiresAt: string;
@@ -714,10 +794,11 @@ export interface LocalInstallationState {
 
 - 正常列表、空列表、加载延迟和请求失败。
 - 匿名浏览与受保护动作触发登录。
-- ZIP 解析成功、包不合法和临时上传过期。
+- 真实 ZIP 目录解析、`SKILL.md` frontmatter 校验、包不合法和临时上传过期。
 - 创建 Skill、Skill 名称冲突和上传新版本。
 - 原上传者修改平台信息、非原上传者被拒绝和 Tag 完整替换。
 - SemVer 递增校验与 Skill 名称不匹配。
 - 指定版本下载凭证与幂等安装事件。
+- 指定版本文件树、可预览 UTF-8 文本和不可预览文件错误。
 
-模拟阶段可以只保存元数据并返回虚拟下载地址，不执行真实文件上传或本地安装。
+模拟阶段在浏览器内解析用户选择的真实 ZIP，并把发布后的文件清单和文本内容保存在内存中；下载地址仍可使用虚拟值，不执行真实文件上传或本地安装。
