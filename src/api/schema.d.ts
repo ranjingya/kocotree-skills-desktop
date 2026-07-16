@@ -257,6 +257,8 @@ export interface components {
             email: string | null;
             /** Format: uri */
             avatarUrl: string | null;
+            /** @description 从上级部门到直接所属部门的名称路径，无法获取时为空数组。 */
+            departmentPath: string[];
             /** @enum {string} */
             status: "ACTIVE" | "DISABLED";
         };

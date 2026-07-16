@@ -58,6 +58,7 @@
 | `name` | `string` | 是 | 飞书展示名。 |
 | `email` | `string \| null` | 是 | 飞书未返回时为 `null`。 |
 | `avatarUrl` | `string \| null` | 是 | 用户头像地址。 |
+| `departmentPath` | `string[]` | 是 | 从上级部门到直接所属部门的名称路径，无法获取时为空数组。 |
 | `status` | `ACTIVE \| DISABLED` | 是 | 用户状态。 |
 
 ### 4.2 Tag
@@ -630,6 +631,7 @@ export interface UserDto {
   name: string;
   email: string | null;
   avatarUrl: string | null;
+  departmentPath: string[];
   status: "ACTIVE" | "DISABLED";
 }
 

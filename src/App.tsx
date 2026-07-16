@@ -446,7 +446,10 @@ function App() {
             >
               <button className="sidebar-user" type="button" aria-label={`${currentUser.name} 账户菜单`}>
                 <span className="user-avatar">{currentUser.name.slice(0, 1)}</span>
-                <span><strong>{currentUser.name}</strong><small>模拟飞书用户 · 账户菜单</small></span>
+                <span>
+                  <strong>{currentUser.name}</strong>
+                  <small>{currentUser.departmentPath?.join(" ") || "部门信息暂无"}</small>
+                </span>
               </button>
             </Dropdown>
           ) : (

@@ -14,9 +14,10 @@ export interface MockVersionFileSource {
 export const mockUsers = {
   current: {
     id: "4e6ee36b-e6ed-4400-b304-89f22c0527d1",
-    name: "南瓜",
-    email: "nangua@example.com",
+    name: "鸭腿",
+    email: "yatui@example.com",
     avatarUrl: null,
+    departmentPath: ["运营中心", "运营办"],
     status: "ACTIVE",
   },
   lin: {
@@ -24,6 +25,7 @@ export const mockUsers = {
     name: "林晓",
     email: "linxiao@example.com",
     avatarUrl: null,
+    departmentPath: [],
     status: "ACTIVE",
   },
   chen: {
@@ -31,6 +33,7 @@ export const mockUsers = {
     name: "陈默",
     email: "chenmo@example.com",
     avatarUrl: null,
+    departmentPath: [],
     status: "ACTIVE",
   },
 } satisfies Record<string, UserDto>;

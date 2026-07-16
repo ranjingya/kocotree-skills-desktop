@@ -547,7 +547,7 @@ components:
     User:
       type: object
       additionalProperties: false
-      required: [id, name, email, avatarUrl, status]
+      required: [id, name, email, avatarUrl, departmentPath, status]
       properties:
         id:
           $ref: '#/components/schemas/Uuid'
@@ -561,6 +561,14 @@ components:
         avatarUrl:
           type: [string, 'null']
           format: uri
+        departmentPath:
+          type: array
+          description: 从上级部门到直接所属部门的名称路径，无法获取时为空数组。
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
         status:
           type: string
           enum: [ACTIVE, DISABLED]
