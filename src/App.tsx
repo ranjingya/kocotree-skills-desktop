@@ -9,7 +9,7 @@ import {
   type UserDto,
 } from "./api";
 import { AppIcon } from "./components/AppIcon";
-import { SkillDetailSheet } from "./components/SkillDetailSheet";
+import { SkillDetailModal } from "./components/SkillDetailModal";
 import { UploadPage } from "./components/UploadPage";
 import "./App.css";
 
@@ -47,14 +47,21 @@ function SkillCard({
   return (
     <article className="skill-card" onClick={() => onOpen(skill)}>
       <div className="skill-card-topline">
-        <div className="skill-title-group">
+        <button
+          className="skill-title-group card-title-button"
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen(skill);
+          }}
+        >
           <span className={`skill-logo skill-logo-${tone}`}>
             {getSkillShortCode(skill)}
           </span>
-          <strong title={skill.displayName}>{skill.displayName}</strong>
-        </div>
-        <button className="icon-button external-button" type="button" aria-label="查看 Skill 详情" onClick={(event) => { event.stopPropagation(); onOpen(skill); }}>
-          <AppIcon name="external" size={17} />
+          <span className="skill-title-text">
+            <strong title={skill.displayName}>{skill.displayName}</strong>
+            <code title={skill.skillName}>{skill.skillName}</code>
+          </span>
         </button>
       </div>
 
@@ -429,7 +436,7 @@ function App() {
         )}
       </div>
 
-      <SkillDetailSheet
+      <SkillDetailModal
         skill={selectedSkill}
         installedSkillIds={installedSkillIds}
         onClose={() => setSelectedSkill(null)}

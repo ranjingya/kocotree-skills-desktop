@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, SideSheet, Spin, TabPane, Tabs, Tag } from "@douyinfe/semi-ui";
+import { Button, Modal, Spin, TabPane, Tabs, Tag } from "@douyinfe/semi-ui";
 import {
   skillApi,
   SkillApiError,
@@ -9,7 +9,7 @@ import {
 } from "../api";
 import { AppIcon } from "./AppIcon";
 
-interface SkillDetailSheetProps {
+interface SkillDetailModalProps {
   skill: SkillSummaryDto | null;
   installedSkillIds: Set<string>;
   onClose: () => void;
@@ -35,20 +35,20 @@ function formatFileSize(bytes: number): string {
 
 /**
  * 功能说明：展示 Skill 平台信息、原始 SKILL.md 和全部历史版本。
- * @param skill - 当前打开的 Skill 摘要，为 null 时关闭抽屉。
+ * @param skill - 当前打开的 Skill 摘要，为 null 时关闭模态框。
  * @param installedSkillIds - 客户端已安装 Skill 编号集合。
- * @param onClose - 关闭详情抽屉的回调。
+ * @param onClose - 关闭详情模态框的回调。
  * @param onInstall - 安装指定历史版本的回调。
  * @param onUploadVersion - 进入指定 Skill 新版本上传流程的回调。
- * @returns Skill 详情抽屉。
+ * @returns Skill 详情模态框。
  */
-export function SkillDetailSheet({
+export function SkillDetailModal({
   skill,
   installedSkillIds,
   onClose,
   onInstall,
   onUploadVersion,
-}: SkillDetailSheetProps) {
+}: SkillDetailModalProps) {
   const [detail, setDetail] = useState<SkillDetailDto | null>(null);
   const [versions, setVersions] = useState<SkillVersionDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,11 +83,12 @@ export function SkillDetailSheet({
   }, [skill]);
 
   return (
-    <SideSheet
-      className="skill-detail-sheet"
+    <Modal
+      className="skill-detail-modal"
       title={detail?.displayName ?? skill?.displayName ?? "Skill 详情"}
       visible={skill !== null}
-      width={620}
+      width={760}
+      centered
       onCancel={onClose}
       footer={detail ? (
         <div className="detail-footer">
@@ -159,6 +160,6 @@ export function SkillDetailSheet({
           </Tabs>
         </div>
       ) : null}
-    </SideSheet>
+    </Modal>
   );
 }
