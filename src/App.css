@@ -895,14 +895,24 @@ textarea:focus-visible,
 }
 
 .skill-detail-modal .semi-modal {
-  max-width: calc(100vw - 48px);
+  width: min(900px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  height: min(864px, calc(100vh - 48px));
+}
+
+.skill-detail-modal .semi-modal-content {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .skill-detail-modal .semi-modal-body {
-  height: min(640px, calc(100vh - 210px));
-  min-height: min(640px, calc(100vh - 210px));
-  flex: none;
-  overflow-y: auto;
+  height: auto;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .detail-loading,
@@ -926,8 +936,34 @@ textarea:focus-visible,
 }
 
 .detail-body {
-  display: grid;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
   gap: 14px;
+}
+
+.detail-body > .semi-tabs {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.detail-body > .semi-tabs > .semi-tabs-content {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.detail-body .semi-tabs-pane,
+.detail-body .semi-tabs-pane-motion-overlay {
+  height: 100%;
+  min-height: 0;
+}
+
+.detail-body .semi-tabs-pane-motion-overlay {
+  overflow-y: auto;
 }
 
 .detail-identity {
@@ -1072,6 +1108,14 @@ textarea:focus-visible,
   padding: 6px 0 10px;
 }
 
+.file-tab-content {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .file-browser-toolbar > span {
   color: #60646d;
   font-size: 12px;
@@ -1084,7 +1128,8 @@ textarea:focus-visible,
 
 .file-browser {
   display: grid;
-  min-height: 320px;
+  min-height: 0;
+  flex: 1;
   overflow: hidden;
   grid-template-columns: 230px minmax(0, 1fr);
   border: 1px solid #e0e3e6;
@@ -1183,7 +1228,7 @@ textarea:focus-visible,
 }
 
 .file-content-preview {
-  max-height: 360px;
+  min-height: 0;
   overflow: auto;
   flex: 1;
   margin: 0;

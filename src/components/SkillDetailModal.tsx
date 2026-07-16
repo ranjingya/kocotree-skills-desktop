@@ -193,7 +193,7 @@ export function SkillDetailModal({
       className="skill-detail-modal"
       title={detail?.displayName ?? skill?.displayName ?? "Skill 详情"}
       visible={skill !== null}
-      width={760}
+      width={900}
       centered
       onCancel={onClose}
       footer={skill ? (
@@ -272,76 +272,78 @@ export function SkillDetailModal({
               </div>
             </TabPane>
             <TabPane tab="查看文件树" itemKey="files">
-              <div className="file-browser-toolbar">
-                <span>版本文件</span>
-                <Select
-                  size="small"
-                  value={fileVersionId}
-                  optionList={versions.map((version) => ({
-                    label: `v${version.version}`,
-                    value: version.id,
-                  }))}
-                  onChange={(value) => setFileVersionId(String(value))}
-                />
-              </div>
-              <div className="file-browser">
-                <div className="file-tree" aria-label="版本文件树">
-                  {fileTreeLoading ? (
-                    <div className="file-pane-state"><Spin size="small" />正在读取文件树</div>
-                  ) : fileEntries.length === 0 ? (
-                    <div className="file-pane-state">该版本没有可展示的文件</div>
-                  ) : orderedFileEntries.map((entry) => {
-                    const segments = entry.path.split("/");
-                    const label = segments[segments.length - 1];
-                    const depth = segments.length - 1;
-                    if (entry.type === "DIRECTORY") {
-                      return (
-                        <div
-                          className="file-tree-directory"
-                          style={{ paddingLeft: 11 + depth * 15 }}
-                          key={entry.path}
-                        >
-                          <AppIcon name="folder" size={15} />
-                          <span title={entry.path}>{label}</span>
-                        </div>
-                      );
-                    }
-                    return (
-                      <button
-                        className={selectedFilePath === entry.path ? "file-tree-file active" : "file-tree-file"}
-                        style={{ paddingLeft: 11 + depth * 15 }}
-                        type="button"
-                        key={entry.path}
-                        onClick={() => setSelectedFilePath(entry.path)}
-                      >
-                        <AppIcon name="file" size={15} />
-                        <span title={entry.path}>{label}</span>
-                        {entry.size !== null && <small>{formatFileSize(entry.size)}</small>}
-                      </button>
-                    );
-                  })}
+              <div className="file-tab-content">
+                <div className="file-browser-toolbar">
+                  <span>版本文件</span>
+                  <Select
+                    size="small"
+                    value={fileVersionId}
+                    optionList={versions.map((version) => ({
+                      label: `v${version.version}`,
+                      value: version.id,
+                    }))}
+                    onChange={(value) => setFileVersionId(String(value))}
+                  />
                 </div>
-                <div className="file-preview">
-                  {selectedFile ? (
-                    <header className="file-preview-heading">
-                      <strong title={selectedFile.path}>{selectedFile.path}</strong>
-                      <span>
-                        {selectedFile.mediaType ?? "二进制文件"}
-                        {selectedFile.size !== null ? ` · ${formatFileSize(selectedFile.size)}` : ""}
-                      </span>
-                    </header>
-                  ) : null}
-                  {filePreviewLoading ? (
-                    <div className="file-pane-state"><Spin size="small" />正在读取文件</div>
-                  ) : fileError ? (
-                    <div className="file-pane-state file-pane-error">{fileError}</div>
-                  ) : fileContent ? (
-                    <pre className="file-content-preview"><code>{fileContent.content}</code></pre>
-                  ) : selectedFile && !selectedFile.previewable ? (
-                    <div className="file-pane-state">该文件不是可预览的 UTF-8 文本</div>
-                  ) : (
-                    <div className="file-pane-state">选择左侧文件查看内容</div>
-                  )}
+                <div className="file-browser">
+                  <div className="file-tree" aria-label="版本文件树">
+                    {fileTreeLoading ? (
+                      <div className="file-pane-state"><Spin size="small" />正在读取文件树</div>
+                    ) : fileEntries.length === 0 ? (
+                      <div className="file-pane-state">该版本没有可展示的文件</div>
+                    ) : orderedFileEntries.map((entry) => {
+                      const segments = entry.path.split("/");
+                      const label = segments[segments.length - 1];
+                      const depth = segments.length - 1;
+                      if (entry.type === "DIRECTORY") {
+                        return (
+                          <div
+                            className="file-tree-directory"
+                            style={{ paddingLeft: 11 + depth * 15 }}
+                            key={entry.path}
+                          >
+                            <AppIcon name="folder" size={15} />
+                            <span title={entry.path}>{label}</span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <button
+                          className={selectedFilePath === entry.path ? "file-tree-file active" : "file-tree-file"}
+                          style={{ paddingLeft: 11 + depth * 15 }}
+                          type="button"
+                          key={entry.path}
+                          onClick={() => setSelectedFilePath(entry.path)}
+                        >
+                          <AppIcon name="file" size={15} />
+                          <span title={entry.path}>{label}</span>
+                          {entry.size !== null && <small>{formatFileSize(entry.size)}</small>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="file-preview">
+                    {selectedFile ? (
+                      <header className="file-preview-heading">
+                        <strong title={selectedFile.path}>{selectedFile.path}</strong>
+                        <span>
+                          {selectedFile.mediaType ?? "二进制文件"}
+                          {selectedFile.size !== null ? ` · ${formatFileSize(selectedFile.size)}` : ""}
+                        </span>
+                      </header>
+                    ) : null}
+                    {filePreviewLoading ? (
+                      <div className="file-pane-state"><Spin size="small" />正在读取文件</div>
+                    ) : fileError ? (
+                      <div className="file-pane-state file-pane-error">{fileError}</div>
+                    ) : fileContent ? (
+                      <pre className="file-content-preview"><code>{fileContent.content}</code></pre>
+                    ) : selectedFile && !selectedFile.previewable ? (
+                      <div className="file-pane-state">该文件不是可预览的 UTF-8 文本</div>
+                    ) : (
+                      <div className="file-pane-state">选择左侧文件查看内容</div>
+                    )}
+                  </div>
                 </div>
               </div>
             </TabPane>
