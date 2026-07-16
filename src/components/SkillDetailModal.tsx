@@ -196,24 +196,28 @@ export function SkillDetailModal({
       width={760}
       centered
       onCancel={onClose}
-      footer={detail ? (
+      footer={skill ? (
         <div className="detail-footer">
-          <Button
-            className="detail-secondary-action"
-            theme="light"
-            type="tertiary"
-            onClick={() => onUploadVersion(detail)}
-          >
-            上传新版本
-          </Button>
-          <Button
-            theme="solid"
-            type="primary"
-            icon={<AppIcon name={installedSkillIds.has(detail.id) ? "check" : "download"} size={16} />}
-            onClick={() => onInstall(detail, detail.latestVersion)}
-          >
-            {installedSkillIds.has(detail.id) ? "重新安装最新版" : "安装最新版"}
-          </Button>
+          {detail ? (
+            <>
+              <Button
+                className="detail-secondary-action"
+                theme="light"
+                type="tertiary"
+                onClick={() => onUploadVersion(detail)}
+              >
+                上传新版本
+              </Button>
+              <Button
+                theme="solid"
+                type="primary"
+                icon={installedSkillIds.has(detail.id) ? undefined : <AppIcon name="download" size={16} />}
+                onClick={() => onInstall(detail, detail.latestVersion)}
+              >
+                {installedSkillIds.has(detail.id) ? "重新安装最新版" : "安装最新版"}
+              </Button>
+            </>
+          ) : <span className="detail-footer-placeholder" aria-hidden="true" />}
         </div>
       ) : null}
     >
