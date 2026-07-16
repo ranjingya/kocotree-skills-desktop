@@ -225,7 +225,8 @@ export function UploadPage({
 
             {!targetSkill && (
               <div className="form-grid">
-                <label className="field field-wide"><span>展示名称</span><input required value={displayName} onChange={(event) => setDisplayName(event.currentTarget.value)} /></label>
+                <label className="field"><span>展示名称</span><input required value={displayName} onChange={(event) => setDisplayName(event.currentTarget.value)} /></label>
+                <label className="field"><span>版本号</span><input required value={version} onChange={(event) => setVersion(event.currentTarget.value)} placeholder="1.0.0" /></label>
                 <label className="field field-wide"><span>展示简介</span><textarea required value={displayDescription} onChange={(event) => setDisplayDescription(event.currentTarget.value)} /></label>
                 <fieldset className="tag-field field-wide">
                   <legend>选择已有 Tag（最多 5 个）</legend>
@@ -265,7 +266,9 @@ export function UploadPage({
             )}
 
             <div className="form-grid version-form-grid">
-              <label className="field"><span>版本号</span><input required value={version} onChange={(event) => setVersion(event.currentTarget.value)} placeholder={targetSkill ? `高于 ${targetSkill.latestVersion.version}` : "1.0.0"} /></label>
+              {targetSkill && (
+                <label className="field"><span>版本号</span><input required value={version} onChange={(event) => setVersion(event.currentTarget.value)} placeholder={`高于 ${targetSkill.latestVersion.version}`} /></label>
+              )}
               <label className="field field-wide"><span>更新说明{targetSkill ? "（必填）" : "（选填）"}</span><textarea required={Boolean(targetSkill)} value={changelog} onChange={(event) => setChangelog(event.currentTarget.value)} placeholder="说明本次发布包含的主要内容" /></label>
             </div>
           </>
