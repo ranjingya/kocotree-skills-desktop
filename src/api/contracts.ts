@@ -15,6 +15,9 @@ export type UpdateSkillMetadataDto = components["schemas"]["UpdateSkillMetadataR
 export type DownloadTicketDto = components["schemas"]["DownloadTicket"];
 export type InstallationEventDto = components["schemas"]["InstallationEventRequest"];
 export type InstallationEventResponseDto = components["schemas"]["InstallationEventResponse"];
+export type SkillFileEntryDto = components["schemas"]["SkillFileEntry"];
+export type SkillFileListResponseDto = components["schemas"]["SkillFileListResponse"];
+export type SkillFileContentDto = components["schemas"]["SkillFileContent"];
 
 export type ListSkillsQuery = NonNullable<operations["listSkills"]["parameters"]["query"]>;
 export type ListVersionsQuery = NonNullable<
@@ -54,6 +57,12 @@ export interface SkillApi {
     skillId: string,
     query?: ListVersionsQuery,
   ): Promise<SkillVersionListResponseDto>;
+  listVersionFiles(skillId: string, versionId: string): Promise<SkillFileListResponseDto>;
+  getVersionFileContent(
+    skillId: string,
+    versionId: string,
+    path: string,
+  ): Promise<SkillFileContentDto>;
   inspectUpload(file: File): Promise<UploadInspectionDto>;
   createSkill(input: CreateSkillDto): Promise<SkillDetailDto>;
   updateSkillMetadata(

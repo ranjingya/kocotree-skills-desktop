@@ -1,4 +1,15 @@
-import type { SkillDetailDto, SkillVersionDto, TagDto, UserDto } from "./contracts";
+import type {
+  SkillDetailDto,
+  SkillFileEntryDto,
+  SkillVersionDto,
+  TagDto,
+  UserDto,
+} from "./contracts";
+
+export interface MockVersionFileSource {
+  files: SkillFileEntryDto[];
+  contents: Record<string, string>;
+}
 
 export const mockUsers = {
   current: {
@@ -113,3 +124,31 @@ export const mockSkillDetails: SkillDetailDto[] = skillMeta.map((item) => {
 });
 
 export const mockVersions = versionFixtures;
+
+/**
+ * 功能说明：为演示版本创建稳定的文件清单与文本内容。
+ * @param version - 需要生成文件数据的 Skill 版本。
+ * @returns 可供模拟文件树和文本预览接口读取的数据。
+ */
+function createVersionFileSource(version: SkillVersionDto): MockVersionFileSource {
+  const usage = `# ${version.skillName}\n\n${version.skillDescription}\n`;
+  return {
+    files: [
+      { path: "assets", type: "DIRECTORY", size: null, mediaType: null, previewable: false },
+      { path: "references", type: "DIRECTORY", size: null, mediaType: null, previewable: false },
+      { path: "SKILL.md", type: "FILE", size: new Blob([version.skillMd]).size, mediaType: "text/markdown", previewable: true },
+      { path: "assets/icon.png", type: "FILE", size: 2_048, mediaType: null, previewable: false },
+      { path: "references/usage.md", type: "FILE", size: new Blob([usage]).size, mediaType: "text/markdown", previewable: true },
+    ],
+    contents: {
+      "SKILL.md": version.skillMd,
+      "references/usage.md": usage,
+    },
+  };
+}
+
+export const mockVersionFiles = Object.fromEntries(
+  Object.values(versionFixtures)
+    .flat()
+    .map((version) => [version.id, createVersionFileSource(version)]),
+) satisfies Record<string, MockVersionFileSource>;

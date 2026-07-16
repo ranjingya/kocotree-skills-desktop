@@ -9,6 +9,8 @@ import {
   type PublishSkillVersionDto,
   type SkillApi,
   type SkillDetailDto,
+  type SkillFileContentDto,
+  type SkillFileListResponseDto,
   type SkillListResponseDto,
   type SkillVersionDto,
   type SkillVersionListResponseDto,
@@ -17,7 +19,19 @@ import {
   type UploadInspectionDto,
   type UserDto,
 } from "./contracts";
-import { mockSkillDetails, mockTags, mockUsers, mockVersions } from "./mockData";
+import {
+  mockSkillDetails,
+  mockTags,
+  mockUsers,
+  mockVersionFiles,
+  mockVersions,
+  type MockVersionFileSource,
+} from "./mockData";
+import {
+  inspectSkillZip,
+  readArchiveText,
+  type SkillArchiveSource,
+} from "./zipInspector";
 
 const MAX_PACKAGE_SIZE = 50 * 1024 * 1024;
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
@@ -27,9 +41,13 @@ export interface MockSkillApiOptions {
   initialUser?: UserDto | null;
 }
 
-interface StoredInspection extends UploadInspectionDto {
+interface StoredInspection {
+  data: UploadInspectionDto;
+  source: SkillArchiveSource;
   used: boolean;
 }
+
+type StoredVersionFileSource = SkillArchiveSource | MockVersionFileSource;
 
 function clone<T>(value: T): T {
   return structuredClone(value);
@@ -85,6 +103,9 @@ export class MockSkillApi implements SkillApi {
   );
   private readonly tags = clone(mockTags);
   private readonly inspections = new Map<string, StoredInspection>();
+  private readonly versionFiles = new Map<string, StoredVersionFileSource>(
+    Object.entries(mockVersionFiles).map(([versionId, source]) => [versionId, clone(source)]),
+  );
   private readonly installationEvents = new Set<string>();
   private currentUser: UserDto | null;
 
@@ -115,6 +136,15 @@ export class MockSkillApi implements SkillApi {
     return skill;
   }
 
+  private findVersion(skillId: string, versionId: string): SkillVersionDto {
+    this.findSkill(skillId);
+    const version = (this.versions.get(skillId) ?? []).find((item) => item.id === versionId);
+    if (!version) {
+      throw new SkillApiError("VERSION_NOT_FOUND", "没有找到该 Skill 版本");
+    }
+    return version;
+  }
+
   private getInspection(uploadId: string): StoredInspection {
     const inspection = this.inspections.get(uploadId);
     if (!inspection) {
@@ -123,7 +153,7 @@ export class MockSkillApi implements SkillApi {
     if (inspection.used) {
       throw new SkillApiError("UPLOAD_ALREADY_USED", "该上传记录已经发布，请重新选择 ZIP");
     }
-    if (new Date(inspection.expiresAt).getTime() <= Date.now()) {
+    if (new Date(inspection.data.expiresAt).getTime() <= Date.now()) {
       throw new SkillApiError("UPLOAD_EXPIRED", "临时上传已过期，请重新选择 ZIP");
     }
     return inspection;
@@ -189,6 +219,43 @@ export class MockSkillApi implements SkillApi {
     return { items: clone(versions.slice(start, start + pageSize)), total: versions.length, page, pageSize };
   }
 
+  async listVersionFiles(skillId: string, versionId: string): Promise<SkillFileListResponseDto> {
+    await this.wait();
+    this.findVersion(skillId, versionId);
+    const source = this.versionFiles.get(versionId);
+    if (!source) throw new SkillApiError("FILE_NOT_FOUND", "没有找到该版本的文件清单");
+    return { items: clone(source.files) };
+  }
+
+  async getVersionFileContent(
+    skillId: string,
+    versionId: string,
+    path: string,
+  ): Promise<SkillFileContentDto> {
+    await this.wait();
+    this.findVersion(skillId, versionId);
+    const source = this.versionFiles.get(versionId);
+    if (!source) throw new SkillApiError("FILE_NOT_FOUND", "没有找到该版本的文件清单");
+
+    if ("archive" in source) {
+      const result = await readArchiveText(source, path);
+      return { path, mediaType: result.mediaType, encoding: "UTF-8", size: result.size, content: result.content };
+    }
+    const file = source.files.find((entry) => entry.path === path && entry.type === "FILE");
+    if (!file) throw new SkillApiError("FILE_NOT_FOUND", "没有找到该版本中的文件", { path });
+    if (!file.previewable || !file.mediaType || source.contents[path] === undefined) {
+      throw new SkillApiError("FILE_PREVIEW_UNAVAILABLE", "该文件类型不支持文本预览", { path });
+    }
+    const content = source.contents[path];
+    return {
+      path,
+      mediaType: file.mediaType,
+      encoding: "UTF-8",
+      size: new TextEncoder().encode(content).byteLength,
+      content,
+    };
+  }
+
   async inspectUpload(file: File): Promise<UploadInspectionDto> {
     await this.wait();
     this.requireUser();
@@ -198,54 +265,65 @@ export class MockSkillApi implements SkillApi {
     if (file.size > MAX_PACKAGE_SIZE) {
       throw new SkillApiError("PACKAGE_TOO_LARGE", "ZIP 不能超过 50 MB");
     }
-    const skillName = file.name.replace(/\.zip$/i, "").trim().toLocaleLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, "") || "untitled-skill";
-    const packageSha256 = await sha256(await file.arrayBuffer());
-    const inspection: StoredInspection = {
+    const buffer = await file.arrayBuffer();
+    const parsed = await inspectSkillZip(buffer);
+    const packageSha256 = await sha256(buffer);
+    const data: UploadInspectionDto = {
       uploadId: crypto.randomUUID(),
       expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
       originalFileName: file.name,
-      skillName,
-      skillDescription: `Use ${skillName} to complete a focused workflow.`,
-      skillMd: `---\nname: ${skillName}\ndescription: Use ${skillName} to complete a focused workflow.\n---\n`,
+      skillName: parsed.skillName,
+      skillDescription: parsed.skillDescription,
+      skillMd: parsed.skillMd,
       packageSize: file.size,
-      fileCount: 1,
+      fileCount: parsed.files.filter((entry) => entry.type === "FILE").length,
       packageSha256,
-      contentHash: packageSha256,
-      warnings: ["模拟接口未解压 ZIP，内容哈希暂用包哈希代替"],
+      contentHash: parsed.contentHash,
+      warnings: [],
+    };
+    const inspection: StoredInspection = {
+      data,
+      source: {
+        archive: parsed.archive,
+        files: parsed.files,
+        originalPathByNormalized: parsed.originalPathByNormalized,
+      },
       used: false,
     };
-    this.inspections.set(inspection.uploadId, inspection);
-    console.info("[MockSkillApi] ZIP 解析完成", { uploadId: inspection.uploadId, skillName });
-    return clone(inspection);
+    this.inspections.set(data.uploadId, inspection);
+    console.info("[MockSkillApi] ZIP 解析完成", { uploadId: data.uploadId, skillName: data.skillName });
+    return clone(data);
   }
 
   async createSkill(input: CreateSkillDto): Promise<SkillDetailDto> {
     await this.wait();
     const user = this.requireUser();
     const inspection = this.getInspection(input.uploadId);
+    const inspectionData = inspection.data;
     if (!SEMVER_PATTERN.test(input.version)) {
       throw new SkillApiError("INVALID_SEMVER", "版本号必须使用 SemVer，例如 1.0.0");
     }
-    const duplicate = this.skills.find((skill) => skill.skillName === inspection.skillName);
+    const duplicate = this.skills.find((skill) => skill.skillName === inspectionData.skillName);
     if (duplicate) {
       throw new SkillApiError("DUPLICATE_SKILL_NAME", "该 Skill 名称已经存在，请发布为新版本", { skillId: duplicate.id });
     }
     const now = new Date().toISOString();
     const skillId = crypto.randomUUID();
     const version: SkillVersionDto = {
-      id: crypto.randomUUID(), version: input.version, skillName: inspection.skillName,
-      skillDescription: inspection.skillDescription, changelog: input.changelog ?? null,
-      packageSize: inspection.packageSize, packageSha256: inspection.packageSha256,
-      contentHash: inspection.contentHash, skillMd: inspection.skillMd, publishedAt: now, uploadedBy: user,
+      id: crypto.randomUUID(), version: input.version, skillName: inspectionData.skillName,
+      skillDescription: inspectionData.skillDescription, changelog: input.changelog ?? null,
+      packageSize: inspectionData.packageSize, packageSha256: inspectionData.packageSha256,
+      contentHash: inspectionData.contentHash, skillMd: inspectionData.skillMd, publishedAt: now, uploadedBy: user,
     };
     const skill: SkillDetailDto = {
-      id: skillId, skillName: inspection.skillName, displayName: input.displayName,
-      skillDescription: inspection.skillDescription, displayDescription: input.displayDescription,
+      id: skillId, skillName: inspectionData.skillName, displayName: input.displayName,
+      skillDescription: inspectionData.skillDescription, displayDescription: input.displayDescription,
       tags: this.resolveTags(input.tags.tagIds, input.tags.newTagNames), latestVersion: version,
       uploadedBy: user, updatedBy: user, installCount: 0, createdAt: now, updatedAt: now,
     };
     this.skills.unshift(skill);
     this.versions.set(skillId, [version]);
+    this.versionFiles.set(version.id, inspection.source);
     inspection.used = true;
     console.info("[MockSkillApi] Skill 创建完成", { skillId, version: input.version });
     return clone(skill);
@@ -272,8 +350,9 @@ export class MockSkillApi implements SkillApi {
     const user = this.requireUser();
     const skill = this.findSkill(skillId);
     const inspection = this.getInspection(input.uploadId);
-    if (inspection.skillName !== skill.skillName) {
-      throw new SkillApiError("SKILL_NAME_MISMATCH", "ZIP 中的 Skill 名称与目标 Skill 不一致，建议发布为新的 Skill", { expectedSkillName: skill.skillName, actualSkillName: inspection.skillName });
+    const inspectionData = inspection.data;
+    if (inspectionData.skillName !== skill.skillName) {
+      throw new SkillApiError("SKILL_NAME_MISMATCH", "ZIP 中的 Skill 名称与目标 Skill 不一致，建议发布为新的 Skill", { expectedSkillName: skill.skillName, actualSkillName: inspectionData.skillName });
     }
     if (!SEMVER_PATTERN.test(input.version)) {
       throw new SkillApiError("INVALID_SEMVER", "版本号必须使用 SemVer，例如 1.2.0");
@@ -286,14 +365,15 @@ export class MockSkillApi implements SkillApi {
       throw new SkillApiError("VERSION_NOT_GREATER", "新版本必须高于当前最新版本");
     }
     const version: SkillVersionDto = {
-      id: crypto.randomUUID(), version: input.version, skillName: inspection.skillName,
-      skillDescription: inspection.skillDescription, changelog: input.changelog,
-      packageSize: inspection.packageSize, packageSha256: inspection.packageSha256,
-      contentHash: inspection.contentHash, skillMd: inspection.skillMd,
+      id: crypto.randomUUID(), version: input.version, skillName: inspectionData.skillName,
+      skillDescription: inspectionData.skillDescription, changelog: input.changelog,
+      packageSize: inspectionData.packageSize, packageSha256: inspectionData.packageSha256,
+      contentHash: inspectionData.contentHash, skillMd: inspectionData.skillMd,
       publishedAt: new Date().toISOString(), uploadedBy: user,
     };
     versions.unshift(version);
     this.versions.set(skillId, versions);
+    this.versionFiles.set(version.id, inspection.source);
     skill.skillDescription = version.skillDescription;
     skill.latestVersion = version;
     skill.updatedBy = user;
