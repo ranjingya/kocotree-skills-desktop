@@ -141,7 +141,7 @@ function BrowsePage({
   }, [query, refreshKey, sort, tagId]);
 
   return (
-    <main className="page-content">
+    <main className="page-content browse-page">
       <header className="page-heading">
         <h1>Skill 浏览</h1>
       </header>
