@@ -16,7 +16,6 @@ import {
   type SkillVersionListResponseDto,
   type TagDto,
   type UpdateSkillMetadataDto,
-  type UploadInspectionDto,
   type UserDto,
 } from "./contracts";
 import {
@@ -28,23 +27,16 @@ import {
   type MockVersionFileSource,
 } from "./mockData";
 import {
-  inspectSkillZip,
   readArchiveText,
   type SkillArchiveSource,
 } from "./zipInspector";
+import { parseSkillPackage } from "./skillPackage";
 
-const MAX_PACKAGE_SIZE = 50 * 1024 * 1024;
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
 export interface MockSkillApiOptions {
   delayMs?: number;
   initialUser?: UserDto | null;
-}
-
-interface StoredInspection {
-  data: UploadInspectionDto;
-  source: SkillArchiveSource;
-  used: boolean;
 }
 
 type StoredVersionFileSource = SkillArchiveSource | MockVersionFileSource;
@@ -85,12 +77,6 @@ function compareSemVer(left: string, right: string): number {
   return 0;
 }
 
-async function sha256(buffer: ArrayBuffer): Promise<string> {
-  const result = await crypto.subtle.digest("SHA-256", buffer);
-  const value = Array.from(new Uint8Array(result), (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return `sha256:${value}`;
-}
-
 /**
  * 功能说明：提供与正式 HTTP 接口相同边界的内存模拟实现。
  * 构造参数 options - 控制模拟延迟和初始登录用户。
@@ -102,7 +88,6 @@ export class MockSkillApi implements SkillApi {
     Object.entries(mockVersions).map(([skillId, versions]) => [skillId, clone(versions)]),
   );
   private readonly tags = clone(mockTags);
-  private readonly inspections = new Map<string, StoredInspection>();
   private readonly versionFiles = new Map<string, StoredVersionFileSource>(
     Object.entries(mockVersionFiles).map(([versionId, source]) => [versionId, clone(source)]),
   );
@@ -143,20 +128,6 @@ export class MockSkillApi implements SkillApi {
       throw new SkillApiError("VERSION_NOT_FOUND", "没有找到该 Skill 版本");
     }
     return version;
-  }
-
-  private getInspection(uploadId: string): StoredInspection {
-    const inspection = this.inspections.get(uploadId);
-    if (!inspection) {
-      throw new SkillApiError("UPLOAD_NOT_FOUND", "没有找到临时上传记录，请重新选择 ZIP");
-    }
-    if (inspection.used) {
-      throw new SkillApiError("UPLOAD_ALREADY_USED", "该上传记录已经发布，请重新选择 ZIP");
-    }
-    if (new Date(inspection.data.expiresAt).getTime() <= Date.now()) {
-      throw new SkillApiError("UPLOAD_EXPIRED", "临时上传已过期，请重新选择 ZIP");
-    }
-    return inspection;
   }
 
   private resolveTags(tagIds: string[], newTagNames: string[]): TagDto[] {
@@ -256,50 +227,12 @@ export class MockSkillApi implements SkillApi {
     };
   }
 
-  async inspectUpload(file: File): Promise<UploadInspectionDto> {
-    await this.wait();
-    this.requireUser();
-    if (!file.name.toLocaleLowerCase().endsWith(".zip")) {
-      throw new SkillApiError("INVALID_SKILL_PACKAGE", "请选择 ZIP 格式的 Skill 包");
-    }
-    if (file.size > MAX_PACKAGE_SIZE) {
-      throw new SkillApiError("PACKAGE_TOO_LARGE", "ZIP 不能超过 50 MB");
-    }
-    const buffer = await file.arrayBuffer();
-    const parsed = await inspectSkillZip(buffer);
-    const packageSha256 = await sha256(buffer);
-    const data: UploadInspectionDto = {
-      uploadId: crypto.randomUUID(),
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      originalFileName: file.name,
-      skillName: parsed.skillName,
-      skillDescription: parsed.skillDescription,
-      skillMd: parsed.skillMd,
-      packageSize: file.size,
-      fileCount: parsed.files.filter((entry) => entry.type === "FILE").length,
-      packageSha256,
-      contentHash: parsed.contentHash,
-      warnings: [],
-    };
-    const inspection: StoredInspection = {
-      data,
-      source: {
-        archive: parsed.archive,
-        files: parsed.files,
-        originalPathByNormalized: parsed.originalPathByNormalized,
-      },
-      used: false,
-    };
-    this.inspections.set(data.uploadId, inspection);
-    console.info("[MockSkillApi] ZIP 解析完成", { uploadId: data.uploadId, skillName: data.skillName });
-    return clone(data);
-  }
-
   async createSkill(input: CreateSkillDto): Promise<SkillDetailDto> {
     await this.wait();
     const user = this.requireUser();
-    const inspection = this.getInspection(input.uploadId);
-    const inspectionData = inspection.data;
+    console.info("[MockSkillApi] 开始校验新 Skill ZIP", { fileName: input.file.name });
+    const parsedPackage = await parseSkillPackage(input.file);
+    const inspectionData = parsedPackage.inspection;
     if (!SEMVER_PATTERN.test(input.version)) {
       throw new SkillApiError("INVALID_SEMVER", "版本号必须使用 SemVer，例如 1.0.0");
     }
@@ -323,8 +256,7 @@ export class MockSkillApi implements SkillApi {
     };
     this.skills.unshift(skill);
     this.versions.set(skillId, [version]);
-    this.versionFiles.set(version.id, inspection.source);
-    inspection.used = true;
+    this.versionFiles.set(version.id, parsedPackage.source);
     console.info("[MockSkillApi] Skill 创建完成", { skillId, version: input.version });
     return clone(skill);
   }
@@ -349,8 +281,9 @@ export class MockSkillApi implements SkillApi {
     await this.wait();
     const user = this.requireUser();
     const skill = this.findSkill(skillId);
-    const inspection = this.getInspection(input.uploadId);
-    const inspectionData = inspection.data;
+    console.info("[MockSkillApi] 开始校验新版本 ZIP", { skillId, fileName: input.file.name });
+    const parsedPackage = await parseSkillPackage(input.file);
+    const inspectionData = parsedPackage.inspection;
     if (inspectionData.skillName !== skill.skillName) {
       throw new SkillApiError("SKILL_NAME_MISMATCH", "ZIP 中的 Skill 名称与目标 Skill 不一致，建议发布为新的 Skill", { expectedSkillName: skill.skillName, actualSkillName: inspectionData.skillName });
     }
@@ -373,12 +306,11 @@ export class MockSkillApi implements SkillApi {
     };
     versions.unshift(version);
     this.versions.set(skillId, versions);
-    this.versionFiles.set(version.id, inspection.source);
+    this.versionFiles.set(version.id, parsedPackage.source);
     skill.skillDescription = version.skillDescription;
     skill.latestVersion = version;
     skill.updatedBy = user;
     skill.updatedAt = version.publishedAt;
-    inspection.used = true;
     console.info("[MockSkillApi] Skill 新版本已发布", { skillId, version: input.version });
     return clone(skill);
   }

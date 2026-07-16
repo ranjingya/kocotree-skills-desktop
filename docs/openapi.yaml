@@ -19,8 +19,6 @@ tags:
     description: Tag 查询
   - name: Skills
     description: Skill 查询、发布与版本管理
-  - name: Uploads
-    description: ZIP 临时解析
 paths:
   /auth/device/start:
     post:
@@ -150,15 +148,19 @@ paths:
     post:
       tags: [Skills]
       summary: 创建 Skill
+      description: 客户端可先在本地解析 ZIP 用于预览；发布时一次性提交原始 ZIP 和平台信息，服务端重新校验包内容。
       operationId: createSkill
       security:
         - bearerAuth: []
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               $ref: '#/components/schemas/CreateSkillRequest'
+            encoding:
+              tags:
+                contentType: application/json
       responses:
         '201':
           description: Skill 已创建
@@ -176,8 +178,6 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-        '410':
-          $ref: '#/components/responses/Gone'
   /skills/{skillId}:
     parameters:
       - $ref: '#/components/parameters/SkillId'
@@ -246,13 +246,14 @@ paths:
     post:
       tags: [Skills]
       summary: 发布新版本
+      description: 一次性提交原始 ZIP 和版本信息，服务端重新校验包内容及 Skill 名称。
       operationId: createSkillVersion
       security:
         - bearerAuth: []
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               $ref: '#/components/schemas/CreateSkillVersionRequest'
       responses:
@@ -272,8 +273,6 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-        '410':
-          $ref: '#/components/responses/Gone'
   /skills/{skillId}/versions/{versionId}/files:
     parameters:
       - $ref: '#/components/parameters/SkillId'
@@ -377,38 +376,6 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /uploads/inspect:
-    post:
-      tags: [Uploads]
-      summary: 解析并校验 Skill ZIP
-      operationId: inspectSkillUpload
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required: [file]
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: 最大 50 MB 的 ZIP
-      responses:
-        '201':
-          description: ZIP 已解析并创建临时上传会话
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UploadInspection'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
 components:
   securitySchemes:
     bearerAuth:
@@ -478,12 +445,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
-    Gone:
-      description: 临时上传已过期或已经使用
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiError'
     UnsupportedMediaType:
       description: 文件类型不支持文本预览
       content:
@@ -529,13 +490,10 @@ components:
             - VERSION_NOT_FOUND
             - FILE_NOT_FOUND
             - FILE_PREVIEW_UNAVAILABLE
-            - UPLOAD_NOT_FOUND
             - DUPLICATE_SKILL_NAME
             - SKILL_NAME_MISMATCH
             - VERSION_ALREADY_EXISTS
             - VERSION_NOT_GREATER
-            - UPLOAD_ALREADY_USED
-            - UPLOAD_EXPIRED
             - DOWNLOAD_UNAVAILABLE
         message:
           type: string
@@ -850,60 +808,15 @@ components:
           uniqueItems: true
           items:
             type: string
-    UploadInspection:
-      type: object
-      additionalProperties: false
-      required:
-        - uploadId
-        - expiresAt
-        - originalFileName
-        - skillName
-        - skillDescription
-        - skillMd
-        - packageSize
-        - fileCount
-        - packageSha256
-        - contentHash
-        - warnings
-      properties:
-        uploadId:
-          $ref: '#/components/schemas/Uuid'
-        expiresAt:
-          $ref: '#/components/schemas/DateTime'
-        originalFileName:
-          type: string
-        skillName:
-          type: string
-          minLength: 1
-          maxLength: 100
-        skillDescription:
-          type: string
-          minLength: 1
-        skillMd:
-          type: string
-        packageSize:
-          type: integer
-          minimum: 1
-          maximum: 52428800
-        fileCount:
-          type: integer
-          minimum: 1
-          maximum: 2000
-        packageSha256:
-          $ref: '#/components/schemas/Sha256'
-        contentHash:
-          $ref: '#/components/schemas/Sha256'
-        warnings:
-          type: array
-          items:
-            type: string
     CreateSkillRequest:
       type: object
       additionalProperties: false
-      required: [uploadId, displayName, displayDescription, tags, version]
+      required: [file, displayName, displayDescription, tags, version]
       properties:
-        uploadId:
-          $ref: '#/components/schemas/Uuid'
+        file:
+          type: string
+          format: binary
+          description: 最大 50 MB 的原始 Skill ZIP
         displayName:
           type: string
           minLength: 1
@@ -922,10 +835,12 @@ components:
     CreateSkillVersionRequest:
       type: object
       additionalProperties: false
-      required: [uploadId, version, changelog]
+      required: [file, version, changelog]
       properties:
-        uploadId:
-          $ref: '#/components/schemas/Uuid'
+        file:
+          type: string
+          format: binary
+          description: 最大 50 MB 的原始 Skill ZIP
         version:
           $ref: '#/components/schemas/SemVer'
         changelog:

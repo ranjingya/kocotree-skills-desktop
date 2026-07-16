@@ -1,12 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Button, Tag } from "@douyinfe/semi-ui";
+import { Button } from "@douyinfe/semi-ui";
 import {
+  parseSkillPackage,
   skillApi,
   SkillApiError,
   type SkillDetailDto,
   type SkillSummaryDto,
+  type SkillPackageInspection,
   type TagDto,
-  type UploadInspectionDto,
 } from "../api";
 import { AppIcon } from "./AppIcon";
 
@@ -24,7 +25,7 @@ function formatFileSize(bytes: number): string {
 }
 
 /**
- * 功能说明：实现 ZIP 解析后创建 Skill 或发布指定 Skill 新版本的两步流程。
+ * 功能说明：在本地解析 ZIP，并在用户确认后一次性创建 Skill 或发布指定 Skill 新版本。
  * @param targetSkill - 从详情页进入时绑定的目标 Skill，新建流程为 null。
  * @param onCancel - 取消发布并返回浏览页的回调。
  * @param onPublished - 发布成功后接收最新 Skill 详情的回调。
@@ -38,7 +39,8 @@ export function UploadPage({
   onSwitchToCreate,
 }: UploadPageProps) {
   const [fileName, setFileName] = useState("");
-  const [inspection, setInspection] = useState<UploadInspectionDto | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [inspection, setInspection] = useState<SkillPackageInspection | null>(null);
   const [availableTags, setAvailableTags] = useState<TagDto[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [newTagNames, setNewTagNames] = useState("");
@@ -68,25 +70,26 @@ export function UploadPage({
   }, [inspection, targetSkill]);
 
   /**
-   * 功能说明：选择 ZIP 后立即调用解析接口并展示只读包信息。
+   * 功能说明：选择 ZIP 后立即在客户端本地解析，并将只读包信息保存在当前页面状态中。
    * @param file - 用户选择的 ZIP 文件。
    * @returns 无返回值。
    */
   async function inspectFile(file: File): Promise<void> {
     setFileName(file.name);
+    setSelectedFile(null);
     setInspection(null);
     setError("");
     setInspecting(true);
     console.info("[KocotreeSkills] 开始解析 Skill ZIP", { fileName: file.name, size: file.size });
     try {
-      const result = await skillApi.inspectUpload(file);
+      const { inspection: result } = await parseSkillPackage(file);
+      setSelectedFile(file);
       setInspection(result);
       if (!targetSkill) {
         setDisplayName(result.skillName);
         setDisplayDescription(result.skillDescription);
       }
       console.info("[KocotreeSkills] Skill ZIP 解析完成", {
-        uploadId: result.uploadId,
         skillName: result.skillName,
       });
     } catch (reason) {
@@ -116,7 +119,7 @@ export function UploadPage({
    */
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if (!inspection) {
+    if (!inspection || !selectedFile) {
       setError("请先选择并成功解析一个 ZIP");
       return;
     }
@@ -126,7 +129,7 @@ export function UploadPage({
       let result: SkillDetailDto;
       if (targetSkill) {
         result = await skillApi.publishSkillVersion(targetSkill.id, {
-          uploadId: inspection.uploadId,
+          file: selectedFile,
           version,
           changelog,
         });
@@ -136,7 +139,7 @@ export function UploadPage({
           throw new SkillApiError("INVALID_REQUEST", "已有 Tag 与新 Tag 合计不能超过 5 个");
         }
         result = await skillApi.createSkill({
-          uploadId: inspection.uploadId,
+          file: selectedFile,
           displayName,
           displayDescription,
           tags: { tagIds: selectedTagIds, newTagNames: createdTags },
@@ -166,7 +169,7 @@ export function UploadPage({
       <header className="page-heading upload-heading">
         <div>
           <h1>{targetSkill ? "上传新版本" : "上传 Skill"}</h1>
-          <p>{targetSkill ? `目标 Skill：${targetSkill.displayName}（${targetSkill.skillName}）` : "解析 ZIP 并确认平台展示信息后发布"}</p>
+          <p>{targetSkill ? `目标 Skill：${targetSkill.displayName}（${targetSkill.skillName}）` : "在本地解析 ZIP，并确认平台展示信息后发布"}</p>
         </div>
       </header>
 
@@ -193,7 +196,7 @@ export function UploadPage({
 
         {inspection && (
           <section className="inspection-result" aria-label="ZIP 解析结果">
-            <div className="inspection-heading"><strong>解析成功</strong><Tag color="green">有效期 30 分钟</Tag></div>
+            <div className="inspection-heading"><strong>本地解析成功</strong></div>
             <dl>
               <div><dt>Skill 名称</dt><dd><code>{inspection.skillName}</code></dd></div>
               <div><dt>Skill 描述</dt><dd>{inspection.skillDescription}</dd></div>
@@ -278,7 +281,7 @@ export function UploadPage({
 
         <div className="form-actions">
           <button className="secondary-button" type="button" onClick={onCancel}>取消</button>
-          <button className="primary-button" type="submit" disabled={!inspection || nameMismatch || inspecting || publishing}>
+          <button className="primary-button" type="submit" disabled={!inspection || !selectedFile || nameMismatch || inspecting || publishing}>
             <AppIcon name="upload" size={17} />{publishing ? "正在发布…" : targetSkill ? "发布新版本" : "发布 Skill"}
           </button>
         </div>

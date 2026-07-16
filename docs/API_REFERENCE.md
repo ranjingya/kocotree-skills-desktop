@@ -42,11 +42,13 @@
 | 获取 Tag 列表 | 是 |
 | 发起或轮询设备授权 | 是 |
 | 获取当前用户 | 否 |
-| 解析 ZIP、创建 Skill、发布版本 | 否 |
+| 创建 Skill、发布版本 | 否 |
 | 修改 Skill 平台信息和 Tag | 否，仅原上传者可操作 |
 | 获取下载地址、上报安装成功 | 否 |
 
 匿名用户触发受保护动作时，客户端先完成设备授权，再重放原动作。
+
+ZIP 预解析是客户端本地能力，不属于 HTTP 鉴权矩阵。当前产品仍在进入上传页面前触发登录。
 
 ## 4. 核心字段
 
@@ -432,59 +434,32 @@ GET /api/skills/{skillId}/versions/{versionId}/files/content?path=references%2Fu
 
 ## 8. 上传、发布与平台信息
 
-### 8.1 解析 ZIP
+### 8.1 本地解析 ZIP
 
-```http
-POST /api/uploads/inspect
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
-```
+选择 ZIP 后，客户端使用本地解析器读取文件，不发起 HTTP 请求。解析结果只保存在当前上传页面的内存状态中，包含 Skill 名称、Skill 描述、`SKILL.md`、文件数、包大小、包哈希和内容哈希。关闭或刷新页面后状态清空，用户需要重新选择文件。
 
-FormData 只包含一个 `file` 字段。不要手动拼接 `Content-Type` 的 boundary。
-
-响应 `201`：
-
-```json
-{
-  "uploadId": "76ce8065-7ed1-4f18-9deb-50de699b5afe",
-  "expiresAt": "2026-07-15T10:00:00.000Z",
-  "originalFileName": "code-review.zip",
-  "skillName": "code-review",
-  "skillDescription": "Review code changes against project rules.",
-  "skillMd": "---\nname: code-review\ndescription: Review code changes.\n---\n",
-  "packageSize": 12042,
-  "fileCount": 8,
-  "packageSha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "contentHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-  "warnings": []
-}
-```
-
-`uploadId` 默认 30 分钟后过期，只能成功发布一次。
+本地解析用于尽早展示信息和反馈包结构错误，不作为服务端可信数据。创建 Skill 或发布新版本时，服务端必须重新解析同一请求中的 ZIP，并重新计算哈希。
 
 ### 8.2 创建 Skill
 
 ```http
 POST /api/skills
 Authorization: Bearer <token>
-Content-Type: application/json
+Content-Type: multipart/form-data
 ```
 
-请求：
+请求使用 FormData，一次提交以下字段：
 
-```json
-{
-  "uploadId": "76ce8065-7ed1-4f18-9deb-50de699b5afe",
-  "displayName": "代码审查助手",
-  "displayDescription": "按照团队规范检查代码变更。",
-  "tags": {
-    "tagIds": ["2bb6b0f2-96f9-49e1-8c2c-a92503171001"],
-    "newTagNames": ["TypeScript"]
-  },
-  "version": "1.0.0",
-  "changelog": "首次发布"
-}
-```
+| 字段 | 类型 | 必填 | 示例 |
+| --- | --- | --- | --- |
+| `file` | ZIP 二进制 | 是 | `code-review.zip` |
+| `displayName` | 字符串 | 是 | `代码审查助手` |
+| `displayDescription` | 字符串 | 是 | `按照团队规范检查代码变更。` |
+| `tags` | `application/json` 部件 | 是 | `{"tagIds":["2bb6b0f2-96f9-49e1-8c2c-a92503171001"],"newTagNames":["TypeScript"]}` |
+| `version` | SemVer 字符串 | 是 | `1.0.0` |
+| `changelog` | 字符串 | 否 | `首次发布` |
+
+客户端让运行时自动生成 multipart boundary。服务端先校验 ZIP，再使用解析出的 Skill 名称和描述创建实体。
 
 响应 `201` 为完整 `SkillDetail`。若 Skill 名称已存在，返回 `409 DUPLICATE_SKILL_NAME`，并在 `details.skillId` 中提供现有 Skill 编号。
 
@@ -516,18 +491,10 @@ Content-Type: application/json
 ```http
 POST /api/skills/{skillId}/versions
 Authorization: Bearer <token>
-Content-Type: application/json
+Content-Type: multipart/form-data
 ```
 
-请求：
-
-```json
-{
-  "uploadId": "76ce8065-7ed1-4f18-9deb-50de699b5afe",
-  "version": "1.5.0",
-  "changelog": "增加 Rust 项目审查规则"
-}
-```
+请求使用 FormData，一次提交 `file`、`version` 和 `changelog`。`file` 是最大 50 MB 的原始 ZIP，`version` 示例为 `1.5.0`，`changelog` 示例为“增加 Rust 项目审查规则”。
 
 任意已登录用户都可以发布新版本。请求不接受 `displayName`、`displayDescription` 或 `tags`，响应 `201` 为更新后的完整 `SkillDetail`；Skill 的 `updatedBy` 更新为该版本上传者。
 
@@ -539,7 +506,6 @@ Content-Type: application/json
 | 409 | `VERSION_ALREADY_EXISTS` | 相同版本号已存在。 |
 | 409 | `VERSION_NOT_GREATER` | 新版本没有高于当前最新版本。 |
 | 409 | `SKILL_NAME_MISMATCH` | ZIP 中的 Skill 名称与目标 Skill 不一致。 |
-| 410 | `UPLOAD_EXPIRED` | 临时上传已过期。 |
 
 `SKILL_NAME_MISMATCH` 的 `details` 返回 `expectedSkillName` 和 `actualSkillName`，客户端据此建议发布为新 Skill。
 
@@ -611,19 +577,16 @@ Content-Type: application/json
 | 404 | `SKILL_NOT_FOUND` | Skill 不存在。 |
 | 404 | `VERSION_NOT_FOUND` | 版本不存在或不属于该 Skill。 |
 | 404 | `FILE_NOT_FOUND` | 文件不存在或不属于该版本。 |
-| 404 | `UPLOAD_NOT_FOUND` | 临时上传不存在。 |
 | 409 | `DUPLICATE_SKILL_NAME` | Skill 名称已存在。 |
 | 409 | `SKILL_NAME_MISMATCH` | 更新包中的 Skill 名称不匹配。 |
 | 409 | `VERSION_ALREADY_EXISTS` | 版本号重复。 |
 | 409 | `VERSION_NOT_GREATER` | 版本号没有严格递增。 |
-| 409 | `UPLOAD_ALREADY_USED` | 临时上传已经完成发布。 |
-| 410 | `UPLOAD_EXPIRED` | 临时上传已过期。 |
 | 415 | `FILE_PREVIEW_UNAVAILABLE` | 文件不是可预览的 UTF-8 文本或超过预览上限。 |
 | 503 | `DOWNLOAD_UNAVAILABLE` | 暂时无法生成下载地址。 |
 
 ## 11. TypeScript DTO 示例
 
-以下类型用于说明前端边界。实际开发时应从 `openapi.yaml` 生成服务端 DTO，避免手写类型与契约漂移。
+以下类型用于说明前端边界。实际开发时应从 `openapi.yaml` 生成服务端 DTO，发布请求适配器把 OpenAPI 的 binary `file` 映射为浏览器 `File`。
 
 ```ts
 export interface UserDto {
@@ -682,7 +645,7 @@ export interface TagAssignmentDto {
 }
 
 export interface CreateSkillDto {
-  uploadId: string;
+  file: File;
   displayName: string;
   displayDescription: string;
   tags: TagAssignmentDto;
@@ -697,23 +660,9 @@ export interface UpdateSkillMetadataDto {
 }
 
 export interface PublishSkillVersionDto {
-  uploadId: string;
+  file: File;
   version: string;
   changelog: string;
-}
-
-export interface UploadInspectionDto {
-  uploadId: string;
-  expiresAt: string;
-  originalFileName: string;
-  skillName: string;
-  skillDescription: string;
-  skillMd: string;
-  packageSize: number;
-  fileCount: number;
-  packageSha256: string;
-  contentHash: string;
-  warnings: string[];
 }
 
 export interface SkillFileEntryDto {
@@ -770,6 +719,18 @@ export interface ApiErrorDto {
 本地模型单独定义：
 
 ```ts
+export interface SkillPackageInspection {
+  originalFileName: string;
+  skillName: string;
+  skillDescription: string;
+  skillMd: string;
+  packageSize: number;
+  fileCount: number;
+  packageSha256: string;
+  contentHash: string;
+  warnings: string[];
+}
+
 export type LocalSkillStatus =
   | "NOT_INSTALLED"
   | "INSTALLED"
@@ -796,7 +757,7 @@ export interface LocalInstallationState {
 
 - 正常列表、空列表、加载延迟和请求失败。
 - 匿名浏览与受保护动作触发登录。
-- 真实 ZIP 目录解析、`SKILL.md` frontmatter 校验、包不合法和临时上传过期。
+- 本地 ZIP 目录解析、`SKILL.md` frontmatter 校验、发布时服务端重新校验和包不合法。
 - 创建 Skill、Skill 名称冲突和上传新版本。
 - 原上传者修改平台信息、非原上传者被拒绝和 Tag 完整替换。
 - SemVer 递增校验与 Skill 名称不匹配。

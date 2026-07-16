@@ -13,8 +13,9 @@
 - 提供人类可读的中文 API 文档，并与 OpenAPI 一一对应。
 - 前端实现阶段定义统一 `SkillApi` 接口。
 - `MockSkillApi` 和未来的 `HttpSkillApi` 实现同一接口。
-- React 组件只能调用 `SkillApi`，不能直接导入模拟数据文件。
-- TypeScript 服务端 DTO 从 OpenAPI 生成，本地安装模型手工维护并明确隔离。
+- React 组件通过 `SkillApi` 访问服务端数据，不能直接导入模拟数据文件。
+- ZIP 预解析由客户端本地解析器负责；发布时 `SkillApi` 一次性接收 ZIP 和表单字段，并模拟服务端重新校验。
+- TypeScript 服务端 DTO 从 OpenAPI 生成，本地安装模型和本地 ZIP 解析状态手工维护并明确隔离。
 
 ## 结果
 

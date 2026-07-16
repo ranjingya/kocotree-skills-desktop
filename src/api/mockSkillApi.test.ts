@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import JSZip from "jszip";
 import { SkillApiError } from "./contracts";
 import { MockSkillApi } from "./mockSkillApi";
+import { parseSkillPackage } from "./skillPackage";
 
 function expectApiError(reason: unknown, code: SkillApiError["code"]): void {
   expect(reason).toBeInstanceOf(SkillApiError);
@@ -38,10 +39,19 @@ describe("MockSkillApi", () => {
     expect(result.items.every((skill) => skill.tags.some((tag) => tag.id === tags[0].id))).toBe(true);
   });
 
-  it("在上传前要求用户登录", async () => {
+  it("允许本地解析，但在发布前要求用户登录", async () => {
     const api = new MockSkillApi({ delayMs: 0 });
+    const file = await createSkillZip("anonymous");
+    const parsed = await parseSkillPackage(file);
 
-    await expect(api.inspectUpload(await createSkillZip("anonymous"))).rejects.toSatisfy(
+    expect(parsed.inspection.skillName).toBe("anonymous");
+    await expect(api.createSkill({
+      file,
+      displayName: "匿名测试",
+      displayDescription: "验证本地解析不依赖登录。",
+      tags: { tagIds: [], newTagNames: [] },
+      version: "1.0.0",
+    })).rejects.toSatisfy(
       (reason: unknown) => {
         expectApiError(reason, "UNAUTHENTICATED");
         return true;
@@ -49,14 +59,13 @@ describe("MockSkillApi", () => {
     );
   });
 
-  it("按解析结果创建新的 Skill", async () => {
+  it("通过单次发布请求创建新的 Skill", async () => {
     const api = new MockSkillApi({ delayMs: 0 });
     await api.signIn();
-    const inspection = await api.inspectUpload(await createSkillZip("my-workflow", "my-workflow"));
     const created = await api.createSkill({
-      uploadId: inspection.uploadId,
+      file: await createSkillZip("my-workflow", "my-workflow"),
       displayName: "我的工作流",
-      displayDescription: "用于验证两步发布流程。",
+      displayDescription: "用于验证单次发布流程。",
       tags: { tagIds: [], newTagNames: ["测试"] },
       version: "1.0.0",
       changelog: "首次发布",
@@ -80,10 +89,9 @@ describe("MockSkillApi", () => {
     const api = new MockSkillApi({ delayMs: 0 });
     await api.signIn();
     const target = (await api.listSkills()).items[0];
-    const inspection = await api.inspectUpload(await createSkillZip("another-skill"));
 
     await expect(api.publishSkillVersion(target.id, {
-      uploadId: inspection.uploadId,
+      file: await createSkillZip("another-skill"),
       version: "9.0.0",
       changelog: "名称不匹配测试",
     })).rejects.toSatisfy((reason: unknown) => {
@@ -97,10 +105,9 @@ describe("MockSkillApi", () => {
     await api.signIn();
     const target = (await api.listSkills()).items.find((skill) => skill.skillName === "code-review");
     expect(target).toBeDefined();
-    const inspection = await api.inspectUpload(await createSkillZip("code-review"));
 
     await expect(api.publishSkillVersion(target!.id, {
-      uploadId: inspection.uploadId,
+      file: await createSkillZip("code-review"),
       version: `${target!.latestVersion.version}-alpha.1`,
       changelog: "预发布版本比较测试",
     })).rejects.toSatisfy((reason: unknown) => {
@@ -151,7 +158,13 @@ describe("MockSkillApi", () => {
     const bytes = await zip.generateAsync({ type: "uint8array" });
     const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 
-    await expect(api.inspectUpload(new File([buffer], "invalid.zip"))).rejects.toSatisfy(
+    await expect(api.createSkill({
+      file: new File([buffer], "invalid.zip"),
+      displayName: "无效 Skill",
+      displayDescription: "用于验证服务端重新校验 ZIP。",
+      tags: { tagIds: [], newTagNames: [] },
+      version: "1.0.0",
+    })).rejects.toSatisfy(
       (reason: unknown) => {
         expectApiError(reason, "INVALID_SKILL_PACKAGE");
         return true;

@@ -82,7 +82,10 @@ export interface paths {
         /** 获取 Skill 列表 */
         get: operations["listSkills"];
         put?: never;
-        /** 创建 Skill */
+        /**
+         * 创建 Skill
+         * @description 客户端可先在本地解析 ZIP 用于预览；发布时一次性提交原始 ZIP 和平台信息，服务端重新校验包内容。
+         */
         post: operations["createSkill"];
         delete?: never;
         options?: never;
@@ -125,7 +128,10 @@ export interface paths {
         /** 获取版本历史 */
         get: operations["listSkillVersions"];
         put?: never;
-        /** 发布新版本 */
+        /**
+         * 发布新版本
+         * @description 一次性提交原始 ZIP 和版本信息，服务端重新校验包内容及 Skill 名称。
+         */
         post: operations["createSkillVersion"];
         delete?: never;
         options?: never;
@@ -213,23 +219,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/uploads/inspect": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 解析并校验 Skill ZIP */
-        post: operations["inspectSkillUpload"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -243,7 +232,7 @@ export interface components {
         Sha256: string;
         ApiError: {
             /** @enum {string} */
-            error: "INVALID_REQUEST" | "INVALID_SKILL_PACKAGE" | "PACKAGE_TOO_LARGE" | "INVALID_SEMVER" | "UNAUTHENTICATED" | "USER_DISABLED" | "NOT_SKILL_OWNER" | "SKILL_NOT_FOUND" | "VERSION_NOT_FOUND" | "FILE_NOT_FOUND" | "FILE_PREVIEW_UNAVAILABLE" | "UPLOAD_NOT_FOUND" | "DUPLICATE_SKILL_NAME" | "SKILL_NAME_MISMATCH" | "VERSION_ALREADY_EXISTS" | "VERSION_NOT_GREATER" | "UPLOAD_ALREADY_USED" | "UPLOAD_EXPIRED" | "DOWNLOAD_UNAVAILABLE";
+            error: "INVALID_REQUEST" | "INVALID_SKILL_PACKAGE" | "PACKAGE_TOO_LARGE" | "INVALID_SEMVER" | "UNAUTHENTICATED" | "USER_DISABLED" | "NOT_SKILL_OWNER" | "SKILL_NOT_FOUND" | "VERSION_NOT_FOUND" | "FILE_NOT_FOUND" | "FILE_PREVIEW_UNAVAILABLE" | "DUPLICATE_SKILL_NAME" | "SKILL_NAME_MISMATCH" | "VERSION_ALREADY_EXISTS" | "VERSION_NOT_GREATER" | "DOWNLOAD_UNAVAILABLE";
             message: string;
             details?: {
                 [key: string]: unknown;
@@ -375,21 +364,12 @@ export interface components {
             user: components["schemas"]["User"];
             scopes: string[];
         };
-        UploadInspection: {
-            uploadId: components["schemas"]["Uuid"];
-            expiresAt: components["schemas"]["DateTime"];
-            originalFileName: string;
-            skillName: string;
-            skillDescription: string;
-            skillMd: string;
-            packageSize: number;
-            fileCount: number;
-            packageSha256: components["schemas"]["Sha256"];
-            contentHash: components["schemas"]["Sha256"];
-            warnings: string[];
-        };
         CreateSkillRequest: {
-            uploadId: components["schemas"]["Uuid"];
+            /**
+             * Format: binary
+             * @description 最大 50 MB 的原始 Skill ZIP
+             */
+            file: string;
             displayName: string;
             displayDescription: string;
             tags: components["schemas"]["TagAssignmentInput"];
@@ -397,7 +377,11 @@ export interface components {
             changelog?: string;
         };
         CreateSkillVersionRequest: {
-            uploadId: components["schemas"]["Uuid"];
+            /**
+             * Format: binary
+             * @description 最大 50 MB 的原始 Skill ZIP
+             */
+            file: string;
             version: components["schemas"]["SemVer"];
             changelog: string;
         };
@@ -471,15 +455,6 @@ export interface components {
         };
         /** @description 资源身份、Skill 名称或版本发生冲突 */
         Conflict: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ApiError"];
-            };
-        };
-        /** @description 临时上传已过期或已经使用 */
-        Gone: {
             headers: {
                 [name: string]: unknown;
             };
@@ -652,7 +627,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateSkillRequest"];
+                "multipart/form-data": components["schemas"]["CreateSkillRequest"];
             };
         };
         responses: {
@@ -670,7 +645,6 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
-            410: components["responses"]["Gone"];
         };
     };
     getSkill: {
@@ -764,7 +738,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateSkillVersionRequest"];
+                "multipart/form-data": components["schemas"]["CreateSkillVersionRequest"];
             };
         };
         responses: {
@@ -782,7 +756,6 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
-            410: components["responses"]["Gone"];
         };
     };
     listSkillVersionFiles: {
@@ -894,39 +867,6 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-        };
-    };
-    inspectSkillUpload: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    /**
-                     * Format: binary
-                     * @description 最大 50 MB 的 ZIP
-                     */
-                    file: string;
-                };
-            };
-        };
-        responses: {
-            /** @description ZIP 已解析并创建临时上传会话 */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UploadInspection"];
-                };
-            };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
         };
     };
 }

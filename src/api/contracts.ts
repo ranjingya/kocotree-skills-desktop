@@ -8,9 +8,10 @@ export type SkillDetailDto = components["schemas"]["SkillDetail"];
 export type SkillVersionDto = components["schemas"]["SkillVersion"];
 export type SkillListResponseDto = components["schemas"]["SkillListResponse"];
 export type SkillVersionListResponseDto = components["schemas"]["SkillVersionListResponse"];
-export type UploadInspectionDto = components["schemas"]["UploadInspection"];
-export type CreateSkillDto = components["schemas"]["CreateSkillRequest"];
-export type PublishSkillVersionDto = components["schemas"]["CreateSkillVersionRequest"];
+type CreateSkillRequestSchema = components["schemas"]["CreateSkillRequest"];
+type CreateSkillVersionRequestSchema = components["schemas"]["CreateSkillVersionRequest"];
+export type CreateSkillDto = Omit<CreateSkillRequestSchema, "file"> & { file: File };
+export type PublishSkillVersionDto = Omit<CreateSkillVersionRequestSchema, "file"> & { file: File };
 export type UpdateSkillMetadataDto = components["schemas"]["UpdateSkillMetadataRequest"];
 export type DownloadTicketDto = components["schemas"]["DownloadTicket"];
 export type InstallationEventDto = components["schemas"]["InstallationEventRequest"];
@@ -63,7 +64,6 @@ export interface SkillApi {
     versionId: string,
     path: string,
   ): Promise<SkillFileContentDto>;
-  inspectUpload(file: File): Promise<UploadInspectionDto>;
   createSkill(input: CreateSkillDto): Promise<SkillDetailDto>;
   updateSkillMetadata(
     skillId: string,
