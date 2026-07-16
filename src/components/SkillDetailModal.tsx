@@ -222,7 +222,7 @@ export function SkillDetailModal({
       ) : null}
     >
       {loading ? (
-        <div className="detail-loading"><Spin size="large" tip="正在加载详情…" /></div>
+        <div className="detail-loading"><Spin size="large" /><span>正在加载详情…</span></div>
       ) : error ? (
         <div className="detail-error"><strong>暂时无法显示详情</strong><span>{error}</span></div>
       ) : detail ? (

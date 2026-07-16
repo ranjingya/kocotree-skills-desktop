@@ -58,13 +58,11 @@ function SkillCard({
           <span className={`skill-logo skill-logo-${tone}`}>
             {getSkillShortCode(skill)}
           </span>
-          <span className="skill-title-text">
-            <strong title={skill.displayName}>{skill.displayName}</strong>
-            <code title={skill.skillName}>{skill.skillName}</code>
-          </span>
+          <strong className="skill-display-name" title={skill.displayName}>{skill.displayName}</strong>
         </button>
       </div>
 
+      <code className="skill-internal-name" title={skill.skillName}>{skill.skillName}</code>
       <p className="skill-description">{skill.displayDescription}</p>
 
       <div className="skill-card-meta">
