@@ -405,41 +405,42 @@ function App() {
           </button>
         </nav>
 
-        {currentUser ? (
-          <Dropdown
-            contentClassName="sidebar-user-dropdown"
-            position="top"
-            trigger="click"
-            showArrow
-            render={(
-              <div className="sidebar-user-popover">
-                <div className="sidebar-user-summary">
-                  <span className="user-avatar">{currentUser.name.slice(0, 1)}</span>
-                  <span>
-                    <strong>{currentUser.name}</strong>
-                    <small>{currentUser.email ?? "模拟飞书用户"}</small>
-                  </span>
+        <div className="sidebar-user-area">
+          {currentUser ? (
+            <Dropdown
+              contentClassName="sidebar-user-dropdown"
+              position="top"
+              trigger="click"
+              render={(
+                <div className="sidebar-user-popover">
+                  <div className="sidebar-user-summary">
+                    <span className="user-avatar">{currentUser.name.slice(0, 1)}</span>
+                    <span>
+                      <strong>{currentUser.name}</strong>
+                      <small>{currentUser.email ?? "模拟飞书用户"}</small>
+                    </span>
+                  </div>
+                  <Dropdown.Menu>
+                    <Dropdown.Item type="danger" icon={<IconExit aria-hidden="true" />} onClick={() => void handleSignOut()}>
+                      退出登录
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
                 </div>
-                <Dropdown.Menu>
-                  <Dropdown.Item type="danger" icon={<IconExit aria-hidden="true" />} onClick={() => void handleSignOut()}>
-                    退出登录
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </div>
-            )}
-          >
-            <button className="sidebar-user" type="button" aria-label={`${currentUser.name} 账户菜单`}>
-              <span className="user-avatar">{currentUser.name.slice(0, 1)}</span>
-              <span><strong>{currentUser.name}</strong><small>模拟飞书用户 · 账户菜单</small></span>
-              <IconChevronDown className="sidebar-user-chevron" size="small" />
+              )}
+            >
+              <button className="sidebar-user" type="button" aria-label={`${currentUser.name} 账户菜单`}>
+                <span className="user-avatar">{currentUser.name.slice(0, 1)}</span>
+                <span><strong>{currentUser.name}</strong><small>模拟飞书用户 · 账户菜单</small></span>
+                <IconChevronDown className="sidebar-user-chevron" size="small" />
+              </button>
+            </Dropdown>
+          ) : (
+            <button className="sidebar-user" type="button" onClick={() => setLoginVisible(true)}>
+              <span className="connection-dot" />
+              <span><strong>未登录</strong><small>浏览无需登录 · 点击登录</small></span>
             </button>
-          </Dropdown>
-        ) : (
-          <button className="sidebar-user" type="button" onClick={() => setLoginVisible(true)}>
-            <span className="connection-dot" />
-            <span><strong>未登录</strong><small>浏览无需登录 · 点击登录</small></span>
-          </button>
-        )}
+          )}
+        </div>
       </aside>
 
       <div className="main-area">
