@@ -408,7 +408,7 @@ function App() {
         {currentUser ? (
           <Dropdown
             contentClassName="sidebar-user-dropdown"
-            position="topLeft"
+            position="top"
             trigger="click"
             showArrow
             render={(
