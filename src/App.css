@@ -74,8 +74,13 @@ textarea:focus-visible,
   align-items: center;
   gap: 11px;
   padding: 0 8px 25px;
-  font-size: 18px;
+  font-size: 15px;
   letter-spacing: -0.02em;
+}
+
+.brand strong {
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .brand-symbol {
@@ -398,7 +403,7 @@ textarea:focus-visible,
 .skill-title-group {
   display: flex;
   min-width: 0;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 
@@ -411,10 +416,18 @@ textarea:focus-visible,
   text-align: left;
 }
 
+.skill-card-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 3px;
+}
+
 .skill-display-name {
   min-width: 0;
   overflow: hidden;
   font-size: 14px;
+  line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -422,7 +435,7 @@ textarea:focus-visible,
 .skill-internal-name {
   display: block;
   min-width: 0;
-  margin: 4px 0 0 38px;
+  margin: 0;
   overflow: hidden;
   color: #989ca4;
   font-family: "SFMono-Regular", Consolas, monospace;
@@ -461,7 +474,7 @@ textarea:focus-visible,
 .skill-description {
   display: -webkit-box;
   min-height: 36px;
-  margin: 3px 0 12px 38px;
+  margin: 0;
   overflow: hidden;
   color: #7b7f88;
   font-size: 12px;
@@ -475,6 +488,7 @@ textarea:focus-visible,
   min-width: 0;
   align-items: center;
   gap: 7px;
+  margin-top: 12px;
 }
 
 .source-badge,
@@ -1245,11 +1259,28 @@ textarea:focus-visible,
     align-items: stretch;
     flex-direction: column;
   }
+
+  .search-box {
+    height: 46px;
+    min-height: 46px;
+    flex: 0 0 46px;
+  }
 }
 
 @media (max-width: 820px) {
   .sidebar {
     flex-basis: 190px;
+  }
+
+  .brand {
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .brand-symbol {
+    width: 28px;
+    height: 28px;
+    font-size: 17px;
   }
 
   .page-content {
