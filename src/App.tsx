@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Dropdown, Modal, Toast } from "@douyinfe/semi-ui";
-import { IconChevronDown, IconExit } from "@douyinfe/semi-icons";
+import { IconExit } from "@douyinfe/semi-icons";
 import {
   skillApi,
   SkillApiError,
@@ -431,7 +431,6 @@ function App() {
               <button className="sidebar-user" type="button" aria-label={`${currentUser.name} 账户菜单`}>
                 <span className="user-avatar">{currentUser.name.slice(0, 1)}</span>
                 <span><strong>{currentUser.name}</strong><small>模拟飞书用户 · 账户菜单</small></span>
-                <IconChevronDown className="sidebar-user-chevron" size="small" />
               </button>
             </Dropdown>
           ) : (

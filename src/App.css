@@ -192,12 +192,6 @@ textarea:focus-visible,
   color: var(--text);
 }
 
-.sidebar-user-chevron {
-  flex: none;
-  margin-left: auto;
-  color: #8b8f97;
-}
-
 .sidebar-user > span:last-child {
   display: grid;
   min-width: 0;
