@@ -42,6 +42,7 @@ export function UploadPage({
   const [availableTags, setAvailableTags] = useState<TagDto[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [newTagNames, setNewTagNames] = useState("");
+  const [newTagInputVisible, setNewTagInputVisible] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [displayDescription, setDisplayDescription] = useState("");
   const [version, setVersion] = useState(targetSkill ? "" : "1.0.0");
@@ -167,7 +168,6 @@ export function UploadPage({
           <h1>{targetSkill ? "上传新版本" : "上传 Skill"}</h1>
           <p>{targetSkill ? `目标 Skill：${targetSkill.displayName}（${targetSkill.skillName}）` : "解析 ZIP 并确认平台展示信息后发布"}</p>
         </div>
-        <Button onClick={onCancel}>返回浏览</Button>
       </header>
 
       <form className="upload-panel" onSubmit={(event) => void handleSubmit(event)}>
@@ -217,7 +217,10 @@ export function UploadPage({
             <div className="form-divider" />
             <div className="form-section-heading">
               <span className="section-number">2</span>
-              <div><h2>{targetSkill ? "填写版本信息" : "确认发布信息"}</h2><p>{targetSkill ? "新版本必须高于当前最新版本" : "平台展示信息不会修改原始 ZIP"}</p></div>
+              <div>
+                <h2>{targetSkill ? "填写版本信息" : "确认发布信息"}</h2>
+                {targetSkill && <p>新版本必须高于当前最新版本</p>}
+              </div>
             </div>
 
             {!targetSkill && (
@@ -226,9 +229,38 @@ export function UploadPage({
                 <label className="field field-wide"><span>展示简介</span><textarea required value={displayDescription} onChange={(event) => setDisplayDescription(event.currentTarget.value)} /></label>
                 <fieldset className="tag-field field-wide">
                   <legend>选择已有 Tag（最多 5 个）</legend>
-                  <div>{availableTags.map((tag) => <button className={selectedTagIds.includes(tag.id) ? "source-chip active" : "source-chip"} type="button" key={tag.id} onClick={() => toggleTag(tag.id)}>{tag.name}</button>)}</div>
+                  <div>
+                    {availableTags.map((tag) => <button className={selectedTagIds.includes(tag.id) ? "source-chip active" : "source-chip"} type="button" key={tag.id} onClick={() => toggleTag(tag.id)}>{tag.name}</button>)}
+                    {newTagInputVisible ? (
+                      <input
+                        className="tag-create-input"
+                        autoFocus
+                        aria-label="创建新 Tag"
+                        value={newTagNames}
+                        onChange={(event) => setNewTagNames(event.currentTarget.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            setNewTagInputVisible(false);
+                          }
+                          if (event.key === "Escape") {
+                            setNewTagInputVisible(false);
+                          }
+                        }}
+                        placeholder="输入 Tag，多个用逗号分隔"
+                      />
+                    ) : (
+                      <button
+                        className="tag-create-button"
+                        type="button"
+                        aria-label="创建新 Tag"
+                        onClick={() => setNewTagInputVisible(true)}
+                      >
+                        <AppIcon name="plus" size={15} />
+                      </button>
+                    )}
+                  </div>
                 </fieldset>
-                <label className="field field-wide"><span>创建新 Tag</span><input value={newTagNames} onChange={(event) => setNewTagNames(event.currentTarget.value)} placeholder="多个 Tag 使用逗号分隔" /></label>
               </div>
             )}
 
