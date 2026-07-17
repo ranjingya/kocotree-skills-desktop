@@ -1491,6 +1491,28 @@ textarea:focus-visible,
   min-width: 0;
 }
 
+.version-main-link {
+  display: block;
+  flex: 1;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 140ms ease;
+}
+
+.version-main-link:hover {
+  background: var(--sidebar);
+}
+
+.version-main-link:focus-visible {
+  outline: 2px solid rgba(0, 145, 57, 0.28);
+  outline-offset: 1px;
+}
+
 .version-main > div {
   display: flex;
   align-items: center;
@@ -1620,9 +1642,8 @@ textarea:focus-visible,
 
 .file-browser {
   display: grid;
-  height: 300px;
-  min-height: 300px;
-  flex: none;
+  min-height: 0;
+  flex: 1;
   overflow: hidden;
   grid-template-columns: 230px minmax(0, 1fr);
   border: 1px solid #e0e3e6;

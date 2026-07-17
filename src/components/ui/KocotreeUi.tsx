@@ -219,20 +219,38 @@ export const Spin = Spinner;
 interface TabPaneProps { tab: ReactNode; itemKey: string; children: ReactNode }
 export function TabPane(_: TabPaneProps) { return null; }
 
+interface TabsProps {
+  children: ReactNode;
+  type?: "line";
+  className?: string;
+  activeKey?: string;
+  onChange?: (activeKey: string) => void;
+}
+
 /**
  * 功能说明：渲染可访问的标签页导航，并只展示当前面板内容。
  * @param children - TabPane 子项集合。
+ * @param className - 标签页根节点的附加类名。
+ * @param activeKey - 由外部控制的当前标签页编号。
+ * @param onChange - 用户切换标签页后的回调。
  * @returns 标签页导航和当前内容面板。
  */
-export function Tabs({ children, className = "" }: { children: ReactNode; type?: "line"; className?: string }) {
+export function Tabs({ children, className = "", activeKey, onChange }: TabsProps) {
   const panes = Children.toArray(children).filter(isValidElement) as ReactElement<TabPaneProps>[];
-  const [activeKey, setActiveKey] = useState(panes[0]?.props.itemKey ?? "");
-  const activePane = panes.find((pane) => pane.props.itemKey === activeKey) ?? panes[0];
+  const [internalActiveKey, setInternalActiveKey] = useState(panes[0]?.props.itemKey ?? "");
+  const currentActiveKey = activeKey ?? internalActiveKey;
+  const activePane = panes.find((pane) => pane.props.itemKey === currentActiveKey) ?? panes[0];
+
+  function handleTabChange(nextActiveKey: string): void {
+    setInternalActiveKey(nextActiveKey);
+    onChange?.(nextActiveKey);
+  }
+
   return (
     <div className={`ui-tabs ${className}`}>
       <div className="ui-tabs-list" role="tablist">
         {panes.map((pane) => (
-          <button className={pane.props.itemKey === activePane?.props.itemKey ? "active" : ""} type="button" role="tab" aria-selected={pane.props.itemKey === activePane?.props.itemKey} key={pane.props.itemKey} onClick={() => setActiveKey(pane.props.itemKey)}>{pane.props.tab}</button>
+          <button className={pane.props.itemKey === activePane?.props.itemKey ? "active" : ""} type="button" role="tab" aria-selected={pane.props.itemKey === activePane?.props.itemKey} key={pane.props.itemKey} onClick={() => handleTabChange(pane.props.itemKey)}>{pane.props.tab}</button>
         ))}
       </div>
       <div className="ui-tabs-content" role="tabpanel">{activePane?.props.children}</div>

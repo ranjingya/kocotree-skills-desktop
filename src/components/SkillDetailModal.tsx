@@ -94,6 +94,7 @@ export function SkillDetailModal({
 }: SkillDetailModalProps) {
   const [detail, setDetail] = useState<SkillDetailDto | null>(null);
   const [versions, setVersions] = useState<SkillVersionDto[]>([]);
+  const [activeTabKey, setActiveTabKey] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fileVersionId, setFileVersionId] = useState("");
@@ -113,6 +114,7 @@ export function SkillDetailModal({
     if (!skill) {
       setDetail(null);
       setVersions([]);
+      setActiveTabKey("overview");
       setFileVersionId("");
       setFileEntries([]);
       setSelectedFilePath("");
@@ -397,7 +399,7 @@ export function SkillDetailModal({
             )
           )}
 
-          <Tabs type="line">
+          <Tabs type="line" activeKey={activeTabKey} onChange={setActiveTabKey}>
             <TabPane tab="介绍" itemKey="overview">
               <section className="detail-section">
                 <h3>Skill 原始说明</h3>
@@ -414,7 +416,15 @@ export function SkillDetailModal({
               <div className="version-list">
                 {versions.map((version) => (
                   <article className="version-item" key={version.id}>
-                    <div className="version-main">
+                    <button
+                      className="version-main version-main-link"
+                      type="button"
+                      aria-label={`浏览 v${version.version} 的版本文件`}
+                      onClick={() => {
+                        setFileVersionId(version.id);
+                        setActiveTabKey("files");
+                      }}
+                    >
                       <div>
                         <strong>v{version.version}</strong>
                         {version.id === detail.currentVersion.id && <Tag size="small" color="green">当前</Tag>}
@@ -423,7 +433,7 @@ export function SkillDetailModal({
                       <p>{version.changelog}</p>
                       <span>{version.uploadedBy.name} · {formatDate(version.publishedAt)} · {formatFileSize(version.packageSize)}</span>
                       {version.status === "WITHDRAWN" && <span className="withdrawal-reason">撤回原因：{version.withdrawalReason}</span>}
-                    </div>
+                    </button>
                     <div className="version-actions">
                       {canManageVersion && version.status === "PUBLISHED" && version.version !== "1.0.0" && (
                         <Button size="small" type="danger" theme="borderless" onClick={() => { setManagementReason(""); setManagementAction({ type: "withdraw", version }); }}>撤回</Button>
