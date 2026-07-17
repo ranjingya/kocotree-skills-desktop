@@ -44,6 +44,7 @@
 .ui-button-primary.ui-button-solid { border-color: var(--koco-primary); background: var(--koco-primary); color: #fff; }
 .ui-button-primary.ui-button-solid:hover:not(:disabled) { border-color: var(--koco-primary-hover); background: var(--koco-primary-hover); }
 .ui-button-danger.ui-button-solid { border-color: var(--koco-danger); background: var(--koco-danger); color: #fff; }
+.ui-button-danger.ui-button-solid:hover:not(:disabled) { border-color: #c95740; background: #c95740; color: #fff; }
 .ui-button-danger.ui-button-light,
 .ui-button-danger.ui-button-borderless { border-color: transparent; background: var(--koco-danger-soft); color: #b84f39; }
 .ui-button-borderless { min-width: 0; border-color: transparent; background: transparent; }

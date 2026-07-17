@@ -1877,7 +1877,9 @@ textarea:focus-visible,
 
 .my-skills-toolbar {
   display: flex;
-  min-height: 56px;
+  height: 64px;
+  min-height: 64px;
+  flex: none;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -1929,10 +1931,14 @@ textarea:focus-visible,
 
 .my-skills-list {
   display: grid;
+  min-height: 0;
+  flex: 1;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   overflow-y: auto;
-  padding-bottom: 12px;
+  align-content: start;
+  padding: 6px 0 24px;
+  scrollbar-gutter: auto;
 }
 
 .my-skill-card {
@@ -1990,14 +1996,11 @@ button.my-skill-card:hover {
 }
 
 .my-skill-warning {
-  display: -webkit-box;
-  overflow: hidden;
+  display: block;
   margin: 0;
   color: #8a6822;
   font-size: 11px;
-  line-height: 1.45;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  line-height: 16px;
 }
 
 .my-skill-statuses {
@@ -2059,6 +2062,11 @@ button.my-skill-card:hover {
 
 .my-skills-login .ui-button {
   margin-top: 8px;
+}
+
+.my-skills-page > .empty-state {
+  min-height: 0;
+  flex: 1;
 }
 
 @media (max-width: 1100px) {
