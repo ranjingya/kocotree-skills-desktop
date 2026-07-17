@@ -526,12 +526,13 @@ function App() {
             onOpenSkill={handleOpenSkill}
           />
         ) : (
-          <UploadPage
+          currentUser ? <UploadPage
             targetSkill={uploadTargetSkill}
+            currentUser={currentUser}
             onCancel={() => { setUploadTargetSkill(null); setActivePage("browse"); }}
             onPublished={handlePublished}
             onSwitchToCreate={() => setUploadTargetSkill(null)}
-          />
+          /> : null
         )}
       </div>
 

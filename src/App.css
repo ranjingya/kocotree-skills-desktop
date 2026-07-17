@@ -1005,6 +1005,23 @@ textarea:focus-visible,
   margin-top: 16px;
 }
 
+.update-metadata-grid {
+  margin-bottom: 4px;
+}
+
+.duplicate-confirmation {
+  display: grid;
+  justify-items: start;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 11px 13px;
+  border: 1px solid #f0d6ae;
+  border-radius: 8px;
+  background: #fffaf2;
+  color: #6f5630;
+  font-size: 12px;
+}
+
 .form-error {
   margin-top: 16px;
   padding: 10px 12px;

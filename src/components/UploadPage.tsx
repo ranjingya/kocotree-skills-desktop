@@ -8,11 +8,13 @@ import {
   type SkillSummaryDto,
   type SkillPackageInspection,
   type TagDto,
+  type UserDto,
 } from "../api";
 import { AppIcon } from "./AppIcon";
 
 interface UploadPageProps {
   targetSkill: SkillSummaryDto | null;
+  currentUser: UserDto;
   onCancel: () => void;
   onPublished: (skill: SkillDetailDto) => void;
   onSwitchToCreate: () => void;
@@ -32,6 +34,7 @@ function nextPatchVersion(version: string): string {
 /**
  * 功能说明：在本地解析 ZIP，并在用户确认后一次性创建 Skill 或发布指定 Skill 新版本。
  * @param targetSkill - 从详情页进入时绑定的目标 Skill，新建流程为 null。
+ * @param currentUser - 当前已登录的发布用户。
  * @param onCancel - 取消发布并返回浏览页的回调。
  * @param onPublished - 发布成功后接收最新 Skill 详情的回调。
  * @param onSwitchToCreate - 名称不匹配时切换为新建 Skill 的回调。
@@ -39,6 +42,7 @@ function nextPatchVersion(version: string): string {
  */
 export function UploadPage({
   targetSkill,
+  currentUser,
   onCancel,
   onPublished,
   onSwitchToCreate,
@@ -57,6 +61,8 @@ export function UploadPage({
   const [inspecting, setInspecting] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
+  const [forkSource, setForkSource] = useState<SkillSummaryDto | null>(null);
+  const [duplicateConflicts, setDuplicateConflicts] = useState<Array<{ id: string; displayName: string; skillName: string }>>([]);
 
   useEffect(() => {
     skillApi.listTags().then(setAvailableTags).catch((reason: unknown) => {
@@ -66,8 +72,14 @@ export function UploadPage({
 
   useEffect(() => {
     setVersion(targetSkill ? nextPatchVersion(targetSkill.currentVersion.version) : "1.0.0");
-    setChangelog("");
+    setChangelog(targetSkill ? "" : "首次发布");
     setError("");
+    setDuplicateConflicts([]);
+    if (targetSkill) {
+      setDisplayName(targetSkill.displayName);
+      setDisplayDescription(targetSkill.displayDescription);
+      setSelectedTagIds(targetSkill.tags.map((tag) => tag.id));
+    }
     if (!targetSkill && inspection) {
       setDisplayName(inspection.skillName);
       setDisplayDescription(inspection.skillDescription);
@@ -122,14 +134,14 @@ export function UploadPage({
    * @param event - React 表单提交事件。
    * @returns 无返回值。
    */
-  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
+  async function publish(confirmDuplicateDisplayName: boolean): Promise<void> {
     if (!inspection || !selectedFile) {
       setError("请先选择并成功解析一个 ZIP");
       return;
     }
     setPublishing(true);
     setError("");
+    setDuplicateConflicts([]);
     try {
       let result: SkillDetailDto;
       if (targetSkill) {
@@ -138,7 +150,11 @@ export function UploadPage({
           baseVersionId: targetSkill.currentVersion.id,
           version,
           changelog,
-          confirmDuplicateDisplayName: false,
+          displayName: targetSkill.owner.id === currentUser.id || currentUser.role === "ADMIN" ? displayName : undefined,
+          displayDescription,
+          tagIds: selectedTagIds,
+          newTagNames: newTagNames.split(/[,，]/).map((name) => name.trim()).filter(Boolean),
+          confirmDuplicateDisplayName,
         });
       } else {
         const createdTags = newTagNames.split(/[,，]/).map((name) => name.trim()).filter(Boolean);
@@ -151,7 +167,9 @@ export function UploadPage({
           displayDescription,
           tagIds: selectedTagIds,
           newTagNames: createdTags,
-          confirmDuplicateDisplayName: false,
+          forkedFromSkillId: forkSource?.id,
+          forkedFromVersionId: forkSource?.currentVersion.id,
+          confirmDuplicateDisplayName,
         });
       }
       console.info("[KocotreeSkills] Skill 发布完成", {
@@ -161,10 +179,18 @@ export function UploadPage({
       onPublished(result);
     } catch (reason) {
       console.error("[KocotreeSkills] Skill 发布失败", reason);
+      if (reason instanceof SkillApiError && reason.code === "DISPLAY_NAME_CONFIRMATION_REQUIRED") {
+        setDuplicateConflicts((reason.details?.conflicts as Array<{ id: string; displayName: string; skillName: string }>) ?? []);
+      }
       setError(reason instanceof SkillApiError ? reason.message : "发布失败，请检查表单后重试");
     } finally {
       setPublishing(false);
     }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    await publish(false);
   }
 
   const nameMismatch = Boolean(
@@ -218,7 +244,7 @@ export function UploadPage({
           <div className="mismatch-notice">
             <strong>Skill 名称不一致，不能作为新版本发布</strong>
             <span>目标为 <code>{targetSkill.skillName}</code>，ZIP 中为 <code>{inspection.skillName}</code>。</span>
-            <Button size="small" onClick={onSwitchToCreate}>改为发布新的 Skill</Button>
+            <Button size="small" onClick={() => { setForkSource(targetSkill); onSwitchToCreate(); }}>作为派生 Skill 发布</Button>
           </div>
         )}
 
@@ -236,7 +262,7 @@ export function UploadPage({
             {!targetSkill && (
               <div className="form-grid">
                 <label className="field"><span>展示名称</span><input required value={displayName} onChange={(event) => setDisplayName(event.currentTarget.value)} /></label>
-                <label className="field"><span>版本号</span><input required value={version} onChange={(event) => setVersion(event.currentTarget.value)} placeholder="1.0.0" /></label>
+                <label className="field"><span>首个版本</span><input readOnly value="1.0.0" /></label>
                 <label className="field field-wide"><span>展示简介</span><textarea required value={displayDescription} onChange={(event) => setDisplayDescription(event.currentTarget.value)} /></label>
                 <fieldset className="tag-field field-wide">
                   <legend>选择已有 Tag（最多 5 个）</legend>
@@ -275,16 +301,36 @@ export function UploadPage({
               </div>
             )}
 
+            {targetSkill && (
+              <div className="form-grid update-metadata-grid">
+                {(targetSkill.owner.id === currentUser.id || currentUser.role === "ADMIN") && (
+                  <label className="field"><span>展示名称</span><input required value={displayName} onChange={(event) => setDisplayName(event.currentTarget.value)} /></label>
+                )}
+                <label className="field field-wide"><span>展示简介</span><textarea required value={displayDescription} onChange={(event) => setDisplayDescription(event.currentTarget.value)} /></label>
+                <fieldset className="tag-field field-wide">
+                  <legend>Tag（最多 5 个）</legend>
+                  <div>{availableTags.map((tag) => <button className={selectedTagIds.includes(tag.id) ? "source-chip active" : "source-chip"} type="button" key={tag.id} onClick={() => toggleTag(tag.id)}>{tag.name}</button>)}</div>
+                </fieldset>
+              </div>
+            )}
+
             <div className="form-grid version-form-grid">
               {targetSkill && (
                 <label className="field"><span>版本号</span><input required value={version} onChange={(event) => setVersion(event.currentTarget.value)} placeholder={`高于 ${targetSkill.currentVersion.version}`} /></label>
               )}
-              <label className="field field-wide"><span>更新说明{targetSkill ? "（必填）" : ""}</span><textarea required={Boolean(targetSkill)} value={changelog} onChange={(event) => setChangelog(event.currentTarget.value)} placeholder={targetSkill ? "请说明本次更新内容，例如：优化触发条件，补充使用示例。" : "首次发布"} /></label>
+              <label className="field field-wide"><span>更新说明{targetSkill ? "（必填）" : ""}</span><textarea required value={changelog} readOnly={!targetSkill} onChange={(event) => setChangelog(event.currentTarget.value)} placeholder={targetSkill ? "请说明本次更新内容，例如：优化触发条件，补充使用示例。" : "首次发布"} /></label>
             </div>
           </>
         )}
 
         {error && <div className="form-error" role="alert">{error}</div>}
+        {duplicateConflicts.length > 0 && (
+          <div className="duplicate-confirmation">
+            <strong>平台中存在同名展示名称</strong>
+            <span>{duplicateConflicts.map((item) => `${item.displayName}（${item.skillName}）`).join("、")}</span>
+            <Button size="small" onClick={() => void publish(true)}>仍然继续发布</Button>
+          </div>
+        )}
 
         <div className="form-actions">
           <button className="secondary-button" type="button" onClick={onCancel}>取消</button>

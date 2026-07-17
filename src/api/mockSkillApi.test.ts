@@ -58,6 +58,16 @@ describe("MockSkillApi", () => {
     expect((await api.listVersionFiles(created.id, created.currentVersion.id)).some((item) => item.path === "SKILL.md")).toBe(true);
   });
 
+  it("展示名称重复时要求用户明确确认", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    await api.signIn();
+    const file = await createSkillZip("another-review");
+    await expect(api.createSkill({ file, displayName: "代码审查助手", displayDescription: "同名展示测试。" }))
+      .rejects.toSatisfy((reason: unknown) => expectApiError(reason, "DISPLAY_NAME_CONFIRMATION_REQUIRED"));
+    const created = await api.createSkill({ file, displayName: "代码审查助手", displayDescription: "同名展示测试。", confirmDuplicateDisplayName: true });
+    expect(created.skillName).toBe("another-review");
+  });
+
   it("发布新版本要求 baseVersionId 与当前版本一致", async () => {
     const api = new MockSkillApi({ delayMs: 0 });
     await api.signIn();
@@ -80,6 +90,18 @@ describe("MockSkillApi", () => {
       version: "9.0.0",
       changelog: "名称不匹配测试",
     })).rejects.toSatisfy((reason: unknown) => expectApiError(reason, "SKILL_NAME_MISMATCH"));
+  });
+
+  it("普通用户发布成功后成为协作者", async () => {
+    const api = new MockSkillApi({ delayMs: 0, initialUser: mockUsers.chen });
+    const target = (await api.listSkills()).items.find((skill) => skill.skillName === "code-review")!;
+    const updated = await api.publishSkillVersion(target.id, {
+      file: await createSkillZip(target.skillName, "", "new collaborator"),
+      baseVersionId: target.currentVersion.id,
+      version: "1.4.3",
+      changelog: "补充协作者测试",
+    });
+    expect(updated.collaborators.map((user) => user.id)).toContain(mockUsers.chen.id);
   });
 
   it("协作者不能修改展示名称", async () => {
