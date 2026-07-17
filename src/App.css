@@ -446,7 +446,7 @@ textarea:focus-visible,
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-bottom: 14px;
+  padding-bottom: 8px;
   border-bottom: 1px solid #e8e9ec;
 }
 
@@ -1368,6 +1368,7 @@ textarea:focus-visible,
 
 .collaborator-list {
   min-width: 0;
+  gap: 4px;
 }
 
 .collaborator-avatar,
@@ -1385,10 +1386,6 @@ textarea:focus-visible,
   font-weight: 700;
 }
 
-.collaborator-list .collaborator-avatar + .collaborator-avatar {
-  margin-left: -8px;
-}
-
 .collaborator-avatar.disabled {
   filter: grayscale(1);
   opacity: 0.55;
@@ -1397,7 +1394,6 @@ textarea:focus-visible,
 .collaborator-more {
   width: auto;
   min-width: 26px;
-  margin-left: 4px;
   padding: 0 5px;
   background: #e9ebed;
   color: #666b75;
