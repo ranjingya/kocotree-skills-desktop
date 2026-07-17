@@ -2,7 +2,7 @@ import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 import { SkillApiError } from "./contracts";
 import { MockSkillApi } from "./mockSkillApi";
-import { mockUsers } from "./mockData";
+import { mockUsers, skillIds } from "./mockData";
 import { MockLocalSkillService } from "./mockLocalSkillService";
 import { parseSkillPackage } from "./skillPackage";
 
@@ -181,5 +181,47 @@ describe("MockSkillApi", () => {
       .rejects.toSatisfy((reason: unknown) => expectApiError(reason, "LOCAL_SKILL_CONFLICT"));
     const result = await localApi.install({ skill: conflictingSkill, version: conflictingVersion, force: true });
     expect(result.backupPath).toContain(".agents/.kocotree/backups");
+  });
+
+  it("安装异常演示卡片覆盖文档中的前端处理场景", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    const tag = (await api.listTags()).find((item) => item.name === "安装异常")!;
+    const result = await api.listSkills({ tagId: tag.id });
+    expect(result.items).toHaveLength(9);
+    expect(result.items.some((skill) => skill.status === "NAME_CONFLICT")).toBe(true);
+    expect((await api.getSkill(skillIds.derivedOverlap)).derivedFrom?.skillName).toBe("code-review");
+    expect((await api.listSkillVersions(skillIds.downgrade)).items).toHaveLength(2);
+    expect((await api.listSkillVersions(skillIds.withdrawn)).items.some((version) => version.status === "WITHDRAWN")).toBe(true);
+  });
+
+  it("安装包校验失败时停止签发下载凭证", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    await api.signIn();
+    const skill = await api.getSkill(skillIds.packageHash);
+    await expect(api.getDownloadTicket(skill.id, skill.currentVersion.id))
+      .rejects.toSatisfy((reason: unknown) => expectApiError(reason, "PACKAGE_HASH_MISMATCH"));
+  });
+
+  it("本地修改和替换失败场景保留强制安装与恢复结果", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    const localApi = new MockLocalSkillService(0);
+    const modified = await api.getSkill(skillIds.localModified);
+    await expect(localApi.install({ skill: modified, version: modified.currentVersion }))
+      .rejects.toSatisfy((reason: unknown) => expectApiError(reason, "LOCAL_SKILL_CONFLICT"));
+
+    const rollback = await api.getSkill(skillIds.rollback);
+    await expect(localApi.install({ skill: rollback, version: rollback.currentVersion }))
+      .rejects.toSatisfy((reason: unknown) => expectApiError(reason, "LOCAL_SKILL_CONFLICT"));
+    await expect(localApi.install({ skill: rollback, version: rollback.currentVersion, force: true }))
+      .rejects.toSatisfy((reason: unknown) => expectApiError(reason, "INSTALL_ROLLBACK_COMPLETED"));
+  });
+
+  it("Claude 目录非空时保留安装结果并返回迁移说明", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    const localApi = new MockLocalSkillService(0);
+    const skill = await api.getSkill(skillIds.claudeLink);
+    const result = await localApi.install({ skill, version: skill.currentVersion });
+    expect(result.record.status).toBe("PLATFORM_INSTALLED");
+    expect(result.notices).toHaveLength(2);
   });
 });

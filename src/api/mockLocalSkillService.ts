@@ -1,4 +1,5 @@
 import { SkillApiError, type LocalInstallRequest, type LocalInstallResult, type LocalSkillRecord, type LocalSkillService } from "./contracts";
+import { mockInstallScenarios, skillIds } from "./mockData";
 
 const initialRecords: LocalSkillRecord[] = [
   {
@@ -22,6 +23,42 @@ const initialRecords: LocalSkillRecord[] = [
     displayName: "个人工作助手",
     installPath: "~/.agents/skills/personal-helper",
     contentHash: `sha256:${"c".repeat(64)}`,
+    installedAt: null,
+    status: "LOCAL_UNKNOWN",
+  },
+  {
+    id: "local-conflict-demo",
+    skillId: null,
+    versionId: null,
+    version: null,
+    skillName: "local-conflict-demo",
+    displayName: "本地同名演示目录",
+    installPath: "~/.agents/skills/local-conflict-demo",
+    contentHash: `sha256:${"d".repeat(64)}`,
+    installedAt: null,
+    status: "LOCAL_UNKNOWN",
+  },
+  {
+    id: "local-modified-demo",
+    skillId: skillIds.localModified,
+    versionId: "8b37c0a5-f1c9-4f4e-a71b-b6f06f671009",
+    version: "1.1.0",
+    skillName: "local-modified-demo",
+    displayName: "演示：本地内容已修改",
+    installPath: "~/.agents/skills/local-modified-demo",
+    contentHash: `sha256:${"e".repeat(64)}`,
+    installedAt: "2026-07-16T08:00:00.000Z",
+    status: "PLATFORM_MODIFIED",
+  },
+  {
+    id: "local-rollback-demo",
+    skillId: null,
+    versionId: null,
+    version: null,
+    skillName: "rollback-demo",
+    displayName: "待恢复的本地 Skill",
+    installPath: "~/.agents/skills/rollback-demo",
+    contentHash: `sha256:${"f".repeat(64)}`,
     installedAt: null,
     status: "LOCAL_UNKNOWN",
   },
@@ -52,9 +89,14 @@ export class MockLocalSkillService implements LocalSkillService {
    */
   async install(input: LocalInstallRequest): Promise<LocalInstallResult> {
     await this.wait();
+    const scenario = mockInstallScenarios[input.skill.id];
     const conflict = this.records.find((item) => item.skillName === input.version.skillName);
     if (conflict && !input.force && (conflict.skillId !== input.skill.id || conflict.status !== "PLATFORM_INSTALLED")) {
       throw new SkillApiError("LOCAL_SKILL_CONFLICT", "本地已存在同名 Skill，请确认后强制替换", { localSkill: structuredClone(conflict) });
+    }
+    if (input.force && scenario?.forcedInstallError) {
+      console.error("[MockLocalSkillService] 模拟目录替换失败并完成恢复", { skillId: input.skill.id });
+      throw new SkillApiError(scenario.forcedInstallError.code, scenario.forcedInstallError.message);
     }
     const record: LocalSkillRecord = {
       id: conflict?.id ?? crypto.randomUUID(),
@@ -75,6 +117,7 @@ export class MockLocalSkillService implements LocalSkillService {
       record: structuredClone(record),
       replacedSkillName: conflict && input.force ? conflict.skillName : null,
       backupPath: conflict && input.force ? `~/.agents/.kocotree/backups/${conflict.skillName}-${Date.now()}` : null,
+      notices: [...(scenario?.completionNotices ?? [])],
     };
   }
 

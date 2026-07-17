@@ -28,6 +28,7 @@ import {
 } from "./contracts";
 import {
   mockNotifications,
+  mockInstallScenarios,
   mockSkillDetails,
   mockTags,
   mockUsers,
@@ -379,6 +380,11 @@ export class MockSkillApi implements SkillApi {
     const skill = this.findSkill(skillId);
     const version = this.findVersion(skillId, versionId);
     if (skill.status !== "ACTIVE" || version.status !== "PUBLISHED") throw new SkillApiError("INSTALLATION_UNAVAILABLE", "当前版本不可安装");
+    const scenario = mockInstallScenarios[skillId];
+    if (scenario?.downloadError) {
+      console.error("[MockSkillApi] 模拟安装包校验失败", { skillId, versionId, code: scenario.downloadError.code });
+      throw new SkillApiError(scenario.downloadError.code, scenario.downloadError.message);
+    }
     return { url: `https://mock.kocotree.local/skills/${skillId}/${versionId}.zip`, expiresAt: new Date(Date.now() + 300_000).toISOString(), packageSha256: version.packageSha256, contentHash: version.contentHash };
   }
 

@@ -98,6 +98,7 @@ export interface LocalInstallResult {
   record: LocalSkillRecord;
   replacedSkillName: string | null;
   backupPath: string | null;
+  notices: string[];
 }
 
 /**
