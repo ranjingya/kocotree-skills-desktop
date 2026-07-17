@@ -571,9 +571,14 @@ function App() {
       <SkillDetailModal
         skill={selectedSkill}
         installedSkillIds={installedSkillIds}
+        currentUser={currentUser}
         onClose={() => setSelectedSkill(null)}
         onInstall={handleInstallVersion}
         onUploadVersion={handleUploadVersion}
+        onChanged={(skill) => {
+          setSelectedSkill(skill);
+          setBrowseRefreshKey((current) => current + 1);
+        }}
       />
 
       <InstallConfirmModal

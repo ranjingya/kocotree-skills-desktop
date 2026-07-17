@@ -132,6 +132,26 @@ describe("MockSkillApi", () => {
     expect((await api.listNotifications()).unreadCount).toBe(0);
   });
 
+  it("归档后从广场隐藏并保留在我的 Skill", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    const user = await api.signIn();
+    const target = (await api.listSkills()).items.find((skill) => skill.owner.id === user.id)!;
+    await api.archiveSkill(target.id, { reason: "测试归档" });
+    expect((await api.listSkills()).items.some((skill) => skill.id === target.id)).toBe(false);
+    expect((await api.listMySkills({ relation: "ARCHIVED" })).items.some((skill) => skill.id === target.id)).toBe(true);
+  });
+
+  it("允许撤回后续版本但保留 1.0.0", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    await api.signIn();
+    const codeReview = (await api.listSkills()).items.find((skill) => skill.skillName === "code-review")!;
+    const withdrawn = await api.withdrawSkillVersion(codeReview.id, codeReview.currentVersion.id, { reason: "存在错误" });
+    expect(withdrawn.status).toBe("WITHDRAWN");
+    const sqlChecker = (await api.listSkills()).items.find((skill) => skill.skillName === "sql-checker")!;
+    await expect(api.withdrawSkillVersion(sqlChecker.id, sqlChecker.currentVersion.id, { reason: "尝试撤回首版" }))
+      .rejects.toSatisfy((reason: unknown) => expectApiError(reason, "INITIAL_VERSION_REQUIRED"));
+  });
+
   it("本地同名未知 Skill 需要强制替换", async () => {
     const api = new MockSkillApi({ delayMs: 0 });
     const localApi = new MockLocalSkillService(0);

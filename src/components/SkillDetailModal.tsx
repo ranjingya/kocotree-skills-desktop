@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Modal, Select, Spin, TabPane, Tabs, Tag } from "@douyinfe/semi-ui";
+import { Button, Modal, Select, Spin, TabPane, Tabs, Tag, Toast } from "@douyinfe/semi-ui";
 import {
   skillApi,
   SkillApiError,
@@ -8,15 +8,19 @@ import {
   type SkillFileContentDto,
   type SkillSummaryDto,
   type SkillVersionDto,
+  type UserDto,
 } from "../api";
 import { AppIcon } from "./AppIcon";
+import { ReasonActionModal } from "./ReasonActionModal";
 
 interface SkillDetailModalProps {
   skill: SkillSummaryDto | null;
   installedSkillIds: Set<string>;
+  currentUser: UserDto | null;
   onClose: () => void;
   onInstall: (skill: SkillSummaryDto, version: SkillVersionDto) => void;
   onUploadVersion: (skill: SkillSummaryDto) => void;
+  onChanged: (skill: SkillDetailDto) => void;
 }
 
 function formatDate(value: string): string {
@@ -77,9 +81,11 @@ function orderFileEntries(entries: FileEntryDto[]): FileEntryDto[] {
 export function SkillDetailModal({
   skill,
   installedSkillIds,
+  currentUser,
   onClose,
   onInstall,
   onUploadVersion,
+  onChanged,
 }: SkillDetailModalProps) {
   const [detail, setDetail] = useState<SkillDetailDto | null>(null);
   const [versions, setVersions] = useState<SkillVersionDto[]>([]);
@@ -92,6 +98,9 @@ export function SkillDetailModal({
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
   const [filePreviewLoading, setFilePreviewLoading] = useState(false);
   const [fileError, setFileError] = useState("");
+  const [managementAction, setManagementAction] = useState<{ type: "archive" | "withdraw"; version?: SkillVersionDto } | null>(null);
+  const [managementReason, setManagementReason] = useState("");
+  const [managementLoading, setManagementLoading] = useState(false);
 
   useEffect(() => {
     if (!skill) {
@@ -188,8 +197,54 @@ export function SkillDetailModal({
   const selectedFile = fileEntries.find((entry) => entry.path === selectedFilePath) ?? null;
   const orderedFileEntries = orderFileEntries(fileEntries);
   const sortedCollaborators = [...(detail?.collaborators ?? [])].sort((left, right) => left.name.localeCompare(right.name, "zh-CN"));
+  const canManageSkill = Boolean(detail && currentUser && (currentUser.role === "ADMIN" || detail.owner.id === currentUser.id));
+  const canManageVersion = Boolean(detail && currentUser && (currentUser.role === "ADMIN" || detail.owner.id === currentUser.id || detail.collaborators.some((user) => user.id === currentUser.id)));
+
+  async function handleManagementConfirm(): Promise<void> {
+    if (!detail || !managementAction || !managementReason.trim()) return;
+    setManagementLoading(true);
+    try {
+      if (managementAction.type === "archive") {
+        const updated = await skillApi.archiveSkill(detail.id, { reason: managementReason.trim() });
+        setDetail(updated);
+        onChanged(updated);
+        Toast.success("Skill 已归档");
+      } else if (managementAction.version) {
+        const updatedVersion = await skillApi.withdrawSkillVersion(detail.id, managementAction.version.id, { reason: managementReason.trim() });
+        setVersions((items) => items.map((item) => item.id === updatedVersion.id ? updatedVersion : item));
+        const updatedDetail = detail.currentVersion.id === updatedVersion.id ? { ...detail, currentVersion: updatedVersion } : detail;
+        setDetail(updatedDetail);
+        onChanged(updatedDetail);
+        Toast.success(`v${updatedVersion.version} 已撤回`);
+      }
+      setManagementAction(null);
+      setManagementReason("");
+    } catch (reason) {
+      console.error("[KocotreeSkills] Skill 管理操作失败", reason);
+      Toast.error(reason instanceof SkillApiError ? reason.message : "操作失败，请稍后重试");
+    } finally {
+      setManagementLoading(false);
+    }
+  }
+
+  async function handleRestore(): Promise<void> {
+    if (!detail) return;
+    setManagementLoading(true);
+    try {
+      const updated = await skillApi.restoreSkill(detail.id);
+      setDetail(updated);
+      onChanged(updated);
+      Toast.success("Skill 已恢复");
+    } catch (reason) {
+      console.error("[KocotreeSkills] Skill 恢复失败", reason);
+      Toast.error(reason instanceof SkillApiError ? reason.message : "恢复失败，请稍后重试");
+    } finally {
+      setManagementLoading(false);
+    }
+  }
 
   return (
+    <>
     <Modal
       className="skill-detail-modal"
       title={detail?.displayName ?? skill?.displayName ?? "Skill 详情"}
@@ -209,6 +264,12 @@ export function SkillDetailModal({
               >
                 上传新版本
               </Button>
+              {canManageSkill && detail.status === "ACTIVE" && (
+                <Button theme="borderless" type="danger" onClick={() => { setManagementReason(""); setManagementAction({ type: "archive" }); }}>归档</Button>
+              )}
+              {canManageSkill && detail.status === "ARCHIVED" && (
+                <Button loading={managementLoading} onClick={() => void handleRestore()}>恢复</Button>
+              )}
               <Button
                 theme="solid"
                 type="primary"
@@ -307,7 +368,12 @@ export function SkillDetailModal({
                       <span>{version.uploadedBy.name} · {formatDate(version.publishedAt)} · {formatFileSize(version.packageSize)}</span>
                       {version.status === "WITHDRAWN" && <span className="withdrawal-reason">撤回原因：{version.withdrawalReason}</span>}
                     </div>
-                    <Button size="small" disabled={version.status === "WITHDRAWN" || detail.status !== "ACTIVE"} onClick={() => onInstall(detail, version)}>安装</Button>
+                    <div className="version-actions">
+                      {canManageVersion && version.status === "PUBLISHED" && version.version !== "1.0.0" && (
+                        <Button size="small" type="danger" theme="borderless" onClick={() => { setManagementReason(""); setManagementAction({ type: "withdraw", version }); }}>撤回</Button>
+                      )}
+                      <Button size="small" disabled={version.status === "WITHDRAWN" || detail.status !== "ACTIVE"} onClick={() => onInstall(detail, version)}>安装</Button>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -392,5 +458,16 @@ export function SkillDetailModal({
         </div>
       ) : null}
     </Modal>
+    <ReasonActionModal
+      title={managementAction?.type === "withdraw" ? "撤回版本" : "归档 Skill"}
+      description={managementAction?.type === "withdraw" ? "撤回后该版本将无法继续安装，本地已经安装的副本仍可使用。" : "归档后 Skill 不再出现在技能广场，本地已经安装的副本仍可使用。"}
+      visible={managementAction !== null}
+      reason={managementReason}
+      loading={managementLoading}
+      onReasonChange={setManagementReason}
+      onCancel={() => { setManagementAction(null); setManagementReason(""); }}
+      onConfirm={() => void handleManagementConfirm()}
+    />
+    </>
   );
 }
