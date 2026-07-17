@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Modal, Select, TextArea, Toast } from "@douyinfe/semi-ui";
+import { Button, Modal, Select, TextArea, Toast } from "./ui";
 import { skillApi, SkillApiError, type SkillDetailDto } from "../api";
 
 /**

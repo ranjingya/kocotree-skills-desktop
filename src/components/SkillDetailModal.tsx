@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Modal, Select, Spin, TabPane, Tabs, Tag, Toast } from "@douyinfe/semi-ui";
+import { Button, Modal, Select, Spin, TabPane, Tabs, Tag, Toast } from "./ui";
 import {
   skillApi,
   SkillApiError,

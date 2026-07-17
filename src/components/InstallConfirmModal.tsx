@@ -1,4 +1,4 @@
-import { Button, Modal } from "@douyinfe/semi-ui";
+import { Button, Modal } from "./ui";
 import type { SkillSummaryDto, SkillVersionDto } from "../api";
 
 /**

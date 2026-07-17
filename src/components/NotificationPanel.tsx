@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button, Spin } from "@douyinfe/semi-ui";
+import { Button, Spin } from "./ui";
 import { skillApi, type NotificationDto } from "../api";
 
 /**

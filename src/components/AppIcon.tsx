@@ -11,7 +11,8 @@ export type AppIconName =
   | "check"
   | "plus"
   | "folder"
-  | "file";
+  | "file"
+  | "logout";
 
 const iconPaths: Record<AppIconName, React.ReactNode> = {
   browse: <><path d="M4 5.5h5v5H4zM15 5.5h5v5h-5zM4 15.5h5v5H4zM15 15.5h5v5h-5z" /></>,
@@ -27,6 +28,7 @@ const iconPaths: Record<AppIconName, React.ReactNode> = {
   plus: <><path d="M12 5v14M5 12h14" /></>,
   folder: <><path d="M3.5 7.5h6l2-2h9v13h-17z" /></>,
   file: <><path d="M6.5 3.5h7l4 4v13h-11z" /><path d="M13.5 3.5v4h4" /></>,
+  logout: <><path d="M10 5H5v14h5" /><path d="M13 8l4 4-4 4M8 12h9" /></>,
 };
 
 /**

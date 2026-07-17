@@ -1,4 +1,4 @@
-import { Button, Modal, TextArea } from "@douyinfe/semi-ui";
+import { Button, Modal, TextArea } from "./ui";
 
 /**
  * 功能说明：为归档和版本撤回收集必填原因并统一确认交互。

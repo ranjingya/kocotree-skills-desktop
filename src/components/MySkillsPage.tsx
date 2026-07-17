@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Spin } from "@douyinfe/semi-ui";
+import { Button, Spin } from "./ui";
 import {
   localSkillService,
   skillApi,

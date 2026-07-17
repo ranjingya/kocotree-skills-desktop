@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Modal, TextArea, Toast } from "@douyinfe/semi-ui";
+import { Button, Modal, TextArea, Toast } from "./ui";
 import { skillApi, SkillApiError, type SkillDetailDto, type TagDto, type UserDto } from "../api";
 import { AppIcon } from "./AppIcon";
 

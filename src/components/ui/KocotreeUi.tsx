@@ -24,6 +24,7 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
   size?: ButtonSize;
   block?: boolean;
   loading?: boolean;
+  icon?: ReactNode;
   htmlType?: "button" | "submit" | "reset";
 }
 
@@ -32,11 +33,11 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
  * @param props - 按钮外观、尺寸、状态与原生按钮属性。
  * @returns 统一样式的按钮元素。
  */
-export function Button({ type = "secondary", theme = type === "primary" ? "solid" : "light", size = "default", block = false, loading = false, disabled, htmlType = "button", className = "", children, ...props }: ButtonProps) {
+export function Button({ type = "secondary", theme = type === "primary" ? "solid" : "light", size = "default", block = false, loading = false, icon, disabled, htmlType = "button", className = "", children, ...props }: ButtonProps) {
   const classes = ["ui-button", `ui-button-${type}`, `ui-button-${theme}`, size === "small" ? "ui-button-small" : "", block ? "ui-button-block" : "", className].filter(Boolean).join(" ");
   return (
     <button {...props} className={classes} type={htmlType} disabled={disabled || loading} aria-busy={loading || undefined}>
-      <span className="ui-button-content">{children}</span>
+      <span className="ui-button-content">{icon}{children}</span>
       {loading && <span className="ui-button-loading" aria-hidden="true"><Spinner size="small" /></span>}
     </button>
   );
@@ -112,7 +113,7 @@ export function Modal({ visible, title, width, onCancel, footer, className = "",
             <button className="ui-modal-close" type="button" aria-label="关闭弹窗" onClick={onCancel}>×</button>
           </header>
           <div className="ui-modal-body">{children}</div>
-          {footer !== undefined && <footer className="ui-modal-footer">{footer}</footer>}
+          {footer != null && <footer className="ui-modal-footer">{footer}</footer>}
         </div>
       </div>
     </div>

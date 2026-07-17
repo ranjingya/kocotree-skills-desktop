@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Button } from "@douyinfe/semi-ui";
+import { Button } from "./ui";
 import {
   parseSkillPackage,
   skillApi,

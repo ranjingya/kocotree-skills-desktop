@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Dropdown, Modal, Toast } from "@douyinfe/semi-ui";
-import { IconExit } from "@douyinfe/semi-icons";
+import { Button, Dropdown, Modal, Toast, ToastViewport } from "./components/ui";
 import {
   skillApi,
   localSkillService,
@@ -518,7 +517,7 @@ function App() {
                   </div>
                   <NotificationPanel onUnreadChange={handleUnreadChange} onOpenSkill={handleOpenNotificationSkill} />
                   <Dropdown.Menu>
-                    <Dropdown.Item type="danger" icon={<IconExit aria-hidden="true" />} onClick={() => void handleSignOut()}>
+                    <Dropdown.Item type="danger" icon={<AppIcon name="logout" size={17} />} onClick={() => void handleSignOut()}>
                       退出登录
                     </Dropdown.Item>
                   </Dropdown.Menu>
@@ -610,6 +609,7 @@ function App() {
           <small>当前为本地模拟流程，不会打开网页或提交真实账号信息。</small>
         </div>
       </Modal>
+      <ToastViewport />
     </div>
   );
 }

@@ -7,11 +7,11 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --accent: #389875;
-  --accent-soft: #eaf7f1;
-  --border: #e1e3e7;
-  --muted: #727680;
-  --sidebar: #f6f6f7;
+  --accent: #009139;
+  --accent-soft: #e9f7ee;
+  --border: #dfe3df;
+  --muted: #757a75;
+  --sidebar: #f7f8f6;
 }
 
 * {
@@ -276,12 +276,12 @@ textarea:focus-visible,
   font-size: 11px;
 }
 
-.sidebar-user-popover .semi-dropdown-menu {
+.sidebar-user-popover .ui-dropdown-menu {
   width: 100%;
   padding: 5px;
 }
 
-.sidebar-user-popover .semi-dropdown-item {
+.sidebar-user-popover .ui-dropdown-item {
   border-radius: 5px;
 }
 
@@ -312,7 +312,7 @@ textarea:focus-visible,
   font-size: 12px;
 }
 
-.notification-panel > header .semi-button {
+.notification-panel > header .ui-button {
   color: var(--accent);
   font-size: 11px;
 }
@@ -1081,16 +1081,6 @@ textarea:focus-visible,
   color: #5f636c;
 }
 
-.semi-button,
-.semi-modal,
-.semi-tag {
-  border-radius: 7px;
-}
-
-.semi-button-primary.semi-button-solid {
-  background: var(--accent);
-}
-
 .detail-footer {
   display: flex;
   min-height: 32px;
@@ -1115,21 +1105,13 @@ textarea:focus-visible,
   background: #f5f6f7;
 }
 
-.skill-detail-modal .semi-modal {
+.skill-detail-modal .ui-modal {
   width: min(900px, calc(100vw - 32px));
   max-width: calc(100vw - 32px);
   height: min(864px, calc(100vh - 48px));
 }
 
-.skill-detail-modal .semi-modal-content {
-  display: flex;
-  height: 100%;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.skill-detail-modal .semi-modal-body {
+.skill-detail-modal .ui-modal-body {
   height: auto;
   min-height: 0;
   flex: 1;
@@ -1164,27 +1146,17 @@ textarea:focus-visible,
   gap: 14px;
 }
 
-.detail-body > .semi-tabs {
+.detail-body > .ui-tabs {
   display: flex;
   min-height: 0;
   flex: 1;
   flex-direction: column;
 }
 
-.detail-body > .semi-tabs > .semi-tabs-content {
+.detail-body > .ui-tabs > .ui-tabs-content {
   min-height: 0;
   flex: 1;
   overflow: hidden;
-}
-
-.detail-body .semi-tabs-pane,
-.detail-body .semi-tabs-pane-motion-overlay {
-  height: 100%;
-  min-height: 0;
-}
-
-.detail-body .semi-tabs-pane-motion-overlay {
-  overflow-y: auto;
 }
 
 .detail-identity {
@@ -1494,7 +1466,7 @@ textarea:focus-visible,
   line-height: 1.6;
 }
 
-.ownership-form .semi-select {
+.ownership-form .ui-select {
   width: 100%;
 }
 
@@ -1520,7 +1492,7 @@ textarea:focus-visible,
   font-weight: 600;
 }
 
-.file-browser-toolbar .semi-select {
+.file-browser-toolbar .ui-select {
   min-width: 112px;
 }
 
@@ -1685,7 +1657,7 @@ textarea:focus-visible,
   line-height: 1.6;
 }
 
-.login-content .semi-button {
+.login-content .ui-button {
   width: 100%;
 }
 
@@ -1861,7 +1833,7 @@ button.my-skill-row:hover {
   text-align: right;
 }
 
-.my-skills-login .semi-button {
+.my-skills-login .ui-button {
   margin-top: 8px;
 }
 
