@@ -194,7 +194,7 @@ textarea:focus-visible,
   color: var(--text);
 }
 
-.sidebar-user > span:last-child {
+.sidebar-user > span:nth-child(2) {
   display: grid;
   min-width: 0;
   gap: 2px;
@@ -1264,7 +1264,7 @@ textarea:focus-visible,
 
 .detail-people {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   padding: 10px 13px;
   border: 1px solid var(--border);
@@ -1346,6 +1346,12 @@ textarea:focus-visible,
 
 .detail-section h3 {
   margin: 0 0 8px;
+  color: #5f655f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.detail-body .ui-tabs-list > button {
   font-size: 14px;
 }
 

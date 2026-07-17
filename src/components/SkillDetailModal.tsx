@@ -317,9 +317,11 @@ export function SkillDetailModal({
               <strong>{detail.displayName}</strong>
               <code>{detail.skillName}</code>
             </div>
-            <span className={`detail-status detail-status-${detail.status.toLocaleLowerCase()}`}>
-              {detail.status === "ACTIVE" ? "使用中" : detail.status === "ARCHIVED" ? "已归档" : "名称冲突"}
-            </span>
+            {detail.status !== "ACTIVE" && (
+              <span className={`detail-status detail-status-${detail.status.toLocaleLowerCase()}`}>
+                {detail.status === "ARCHIVED" ? "已归档" : "名称冲突"}
+              </span>
+            )}
           </div>
           <p className="detail-description">{detail.displayDescription}</p>
           <div className="detail-tags">
@@ -332,10 +334,6 @@ export function SkillDetailModal({
           </div>
 
           <div className="detail-people">
-            <div>
-              <span>Owner</span>
-              <strong><span className="collaborator-avatar">{detail.owner.name.slice(0, 1)}</span>{detail.owner.name}</strong>
-            </div>
             <div>
               <span>协作者 {sortedCollaborators.length}</span>
               <div className="collaborator-list">
