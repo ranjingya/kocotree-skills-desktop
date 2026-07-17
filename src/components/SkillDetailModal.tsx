@@ -12,6 +12,8 @@ import {
 } from "../api";
 import { AppIcon } from "./AppIcon";
 import { ReasonActionModal } from "./ReasonActionModal";
+import { SkillMetadataModal } from "./SkillMetadataModal";
+import { OwnershipTransferModal } from "./OwnershipTransferModal";
 
 interface SkillDetailModalProps {
   skill: SkillSummaryDto | null;
@@ -101,6 +103,8 @@ export function SkillDetailModal({
   const [managementAction, setManagementAction] = useState<{ type: "archive" | "withdraw"; version?: SkillVersionDto } | null>(null);
   const [managementReason, setManagementReason] = useState("");
   const [managementLoading, setManagementLoading] = useState(false);
+  const [metadataVisible, setMetadataVisible] = useState(false);
+  const [ownershipVisible, setOwnershipVisible] = useState(false);
 
   useEffect(() => {
     if (!skill) {
@@ -260,6 +264,7 @@ export function SkillDetailModal({
                 className="detail-secondary-action"
                 theme="light"
                 type="tertiary"
+                disabled={detail.status !== "ACTIVE"}
                 onClick={() => onUploadVersion(detail)}
               >
                 上传新版本
@@ -269,6 +274,12 @@ export function SkillDetailModal({
               )}
               {canManageSkill && detail.status === "ARCHIVED" && (
                 <Button loading={managementLoading} onClick={() => void handleRestore()}>恢复</Button>
+              )}
+              {canManageVersion && (
+                <Button theme="borderless" onClick={() => setMetadataVisible(true)}>编辑信息</Button>
+              )}
+              {canManageSkill && detail.collaborators.some((user) => user.status === "ACTIVE") && (
+                <Button theme="borderless" onClick={() => setOwnershipVisible(true)}>转移所有权</Button>
               )}
               <Button
                 theme="solid"
@@ -467,6 +478,23 @@ export function SkillDetailModal({
       onReasonChange={setManagementReason}
       onCancel={() => { setManagementAction(null); setManagementReason(""); }}
       onConfirm={() => void handleManagementConfirm()}
+    />
+    <SkillMetadataModal
+      skill={detail}
+      currentUser={currentUser}
+      visible={metadataVisible}
+      onCancel={() => setMetadataVisible(false)}
+      onUpdated={(updated) => {
+        setMetadataVisible(false);
+        setDetail(updated);
+        onChanged(updated);
+      }}
+    />
+    <OwnershipTransferModal
+      skill={detail}
+      visible={ownershipVisible}
+      onCancel={() => setOwnershipVisible(false)}
+      onCreated={() => setOwnershipVisible(false)}
     />
     </>
   );

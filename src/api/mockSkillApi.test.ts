@@ -113,6 +113,24 @@ describe("MockSkillApi", () => {
       .rejects.toSatisfy((reason: unknown) => expectApiError(reason, "OWNER_REQUIRED"));
   });
 
+  it("协作者可以修改展示简介", async () => {
+    const api = new MockSkillApi({ delayMs: 0, initialUser: mockUsers.lin });
+    const target = (await api.listSkills()).items.find((skill) => skill.skillName === "code-review")!;
+    const updated = await api.updateSkillMetadata(target.id, { displayDescription: "协作者更新后的展示简介。" });
+    expect(updated.displayDescription).toContain("协作者更新");
+    expect(updated.updatedBy.id).toBe(mockUsers.lin.id);
+  });
+
+  it("所有权只能转移给现有协作者", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    await api.signIn();
+    const target = (await api.listSkills()).items.find((skill) => skill.skillName === "code-review")!;
+    const transfer = await api.createOwnershipTransfer(target.id, { targetUserId: mockUsers.lin.id, reason: "职责调整" });
+    expect(transfer.status).toBe("PENDING");
+    await expect(api.createOwnershipTransfer(target.id, { targetUserId: mockUsers.chen.id }))
+      .rejects.toSatisfy((reason: unknown) => expectApiError(reason, "COLLABORATOR_REQUIRED"));
+  });
+
   it("安装上报使用事件 ID 保持幂等", async () => {
     const api = new MockSkillApi({ delayMs: 0 });
     await api.signIn();
