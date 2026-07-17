@@ -94,7 +94,14 @@ function SkillCard({
       </div>
 
       <div className="skill-card-meta">
-        <span className="source-badge">@{skill.owner.name}</span>
+        <span
+          className="skill-card-owner-avatar"
+          role="img"
+          aria-label={`Owner：${skill.owner.name}`}
+          title={`Owner：${skill.owner.name}`}
+        >
+          {skill.owner.avatarUrl ? <img src={skill.owner.avatarUrl} alt="" /> : skill.owner.name.slice(0, 1)}
+        </span>
         <span className="download-count">
           <AppIcon name="download" size={14} />
           {skill.installCount.toLocaleString("zh-CN")}
