@@ -17,6 +17,7 @@
   --border: #dfe3df;
   --muted: #757a75;
   --sidebar: #f7f8f6;
+  --page-controls-height: 138px;
 }
 
 * {
@@ -128,6 +129,10 @@ textarea:focus-visible,
 .sidebar-nav button:hover {
   background: #ececef;
   color: #24262b;
+}
+
+.sidebar-nav button.active:hover {
+  background: #dcdde0;
 }
 
 .sidebar-nav button.active {
@@ -431,6 +436,7 @@ textarea:focus-visible,
 }
 
 .filter-panel {
+  min-height: var(--page-controls-height);
   flex: none;
   padding: 16px;
   border: 1px solid var(--border);
@@ -467,12 +473,22 @@ textarea:focus-visible,
   color: #696d77;
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.sort-tabs button:hover {
+  background: #f1f2f3;
+  color: #2e3036;
 }
 
 .sort-tabs button.active {
   background: #e9e9eb;
   color: #2e3036;
   font-weight: 600;
+}
+
+.sort-tabs button.active:hover {
+  background: #dfe0e2;
 }
 
 .search-box {
@@ -533,6 +549,7 @@ textarea:focus-visible,
   cursor: pointer;
   font-size: 12px;
   white-space: nowrap;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
 .source-chip:hover,
@@ -540,6 +557,10 @@ textarea:focus-visible,
   border-color: var(--accent-border);
   background: var(--accent-soft);
   color: var(--accent);
+}
+
+.source-chip.active:hover {
+  background: #def2e5;
 }
 
 .skill-grid {
@@ -712,6 +733,11 @@ textarea:focus-visible,
   border: 1px solid var(--accent-border);
   background: var(--accent-soft);
   color: var(--accent);
+}
+
+.install-button.installed:hover {
+  border-color: #91cda6;
+  background: #def2e5;
 }
 
 .empty-state {
@@ -1066,12 +1092,18 @@ textarea:focus-visible,
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
 }
 
 .primary-button {
   border: 1px solid var(--accent);
   background: var(--accent);
   color: #fff;
+}
+
+.primary-button:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
 }
 
 .primary-button:disabled {
@@ -1084,6 +1116,12 @@ textarea:focus-visible,
   border: 1px solid #dcdee2;
   background: #fff;
   color: #5f636c;
+}
+
+.secondary-button:hover {
+  border-color: #cbd0d4;
+  background: #f1f2f3;
+  color: #34373d;
 }
 
 .detail-footer {
@@ -1755,12 +1793,12 @@ textarea:focus-visible,
 
 .my-skills-toolbar {
   display: flex;
-  min-height: 56px;
-  align-items: center;
+  min-height: var(--page-controls-height);
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
-  padding: 7px;
+  padding: 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
 }
@@ -1781,6 +1819,13 @@ textarea:focus-visible,
   background: transparent;
   color: var(--muted);
   cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.domain-tabs button:hover,
+.relation-tabs button:hover {
+  background: #f1f2f3;
+  color: #27292f;
 }
 
 .domain-tabs button.active,
@@ -1788,6 +1833,11 @@ textarea:focus-visible,
   background: #eceef1;
   color: #27292f;
   font-weight: 600;
+}
+
+.domain-tabs button.active:hover,
+.relation-tabs button.active:hover {
+  background: #dfe0e2;
 }
 
 .my-skills-list {
@@ -1872,6 +1922,10 @@ button.my-skill-row:hover {
 }
 
 @media (max-width: 1100px) {
+  :root {
+    --page-controls-height: 194px;
+  }
+
   .skill-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

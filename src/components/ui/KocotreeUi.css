@@ -83,8 +83,8 @@
 
 .ui-tabs { display: flex; min-height: 0; flex: 1; flex-direction: column; }
 .ui-tabs-list { display: flex; flex: none; gap: 4px; border-bottom: 1px solid var(--koco-border-light); }
-.ui-tabs-list > button { position: relative; height: 42px; padding: 0 10px; border: 0; background: transparent; color: var(--koco-muted); cursor: pointer; font-size: 13px; }
-.ui-tabs-list > button:hover { color: var(--koco-text); }
+.ui-tabs-list > button { position: relative; height: 42px; padding: 0 10px; border: 0; border-radius: 8px 8px 0 0; background: transparent; color: var(--koco-muted); cursor: pointer; font-size: 13px; transition: background-color 140ms ease, color 140ms ease; }
+.ui-tabs-list > button:hover { background: var(--koco-surface-subtle); color: var(--koco-text); }
 .ui-tabs-list > button.active { color: var(--koco-text); font-weight: 600; }
 .ui-tabs-list > button.active::after { position: absolute; right: 8px; bottom: -1px; left: 8px; height: 2px; background: var(--koco-primary); content: ""; }
 .ui-tabs-content { min-height: 0; flex: 1; overflow: auto; }
