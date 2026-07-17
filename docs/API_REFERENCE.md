@@ -213,7 +213,7 @@ GET /api/skills?query=review&tagId=tag_dev&sort=UPDATED_DESC&page=1&pageSize=20
 
 排序枚举：`UPDATED_DESC`、`CREATED_DESC`、`INSTALLS_DESC`。
 
-公开列表不返回 `ARCHIVED`，但返回带不可安装状态的 `NAME_CONFLICT`。
+公开列表不返回 `ARCHIVED` 或 `NAME_CONFLICT`。两种状态仅通过在线管理列表和已安装客户端状态查询返回。
 
 ### 7.2 Skill 详情
 
@@ -390,20 +390,31 @@ Authorization: Bearer <token>
 ### 9.4 已安装客户端查询状态
 
 ```http
-GET /api/skills/{skillId}/installation-status
+GET /api/skills/{skillId}/installation-status?versionId={versionId}
 Authorization: Bearer <token>
 ```
 
-归档时只返回：
+`versionId` 来自本地安装凭证，可选。响应不返回 ZIP、下载地址或完整平台展示信息。
+
+归档且本地安装版本已撤回时返回：
 
 ```json
 {
   "skillId": "skill_123",
   "status": "ARCHIVED",
   "archivedAt": "2026-07-17T10:00:00+08:00",
-  "archiveReason": "该 Skill 已停止维护。"
+  "archiveReason": "该 Skill 已停止维护。",
+  "nameConflictReason": null,
+  "versionStatus": "WITHDRAWN",
+  "withdrawalReason": "该版本包含错误的安装说明。",
+  "recommendedVersion": {
+    "id": "version_456",
+    "version": "1.2.0"
+  }
 }
 ```
+
+在线状态查询失败属于临时状态，客户端保留安装凭证和本地记录并显示“在线信息不可用”，不得自动改为 `LOCAL_UNKNOWN`。
 
 ## 10. 所有权转移
 

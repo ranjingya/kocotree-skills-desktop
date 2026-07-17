@@ -30,11 +30,11 @@ async function createSkillZip(skillName: string, rootDirectory = "", extraConten
 }
 
 describe("MockSkillApi", () => {
-  it("允许匿名浏览并隐藏归档 Skill", async () => {
+  it("允许匿名浏览并隐藏归档及名称失效 Skill", async () => {
     const api = new MockSkillApi({ delayMs: 0 });
     const result = await api.listSkills();
     expect(result.items.length).toBeGreaterThan(0);
-    expect(result.items.every((skill) => skill.status !== "ARCHIVED")).toBe(true);
+    expect(result.items.every((skill) => skill.status === "ACTIVE")).toBe(true);
   });
 
   it("允许本地解析，但在发布前要求登录", async () => {
@@ -187,11 +187,25 @@ describe("MockSkillApi", () => {
     const api = new MockSkillApi({ delayMs: 0 });
     const tag = (await api.listTags()).find((item) => item.name === "安装异常")!;
     const result = await api.listSkills({ tagId: tag.id });
-    expect(result.items).toHaveLength(9);
-    expect(result.items.some((skill) => skill.status === "NAME_CONFLICT")).toBe(true);
+    expect(result.items).toHaveLength(8);
     expect((await api.getSkill(skillIds.derivedOverlap)).derivedFrom?.skillName).toBe("code-review");
     expect((await api.listSkillVersions(skillIds.downgrade)).items).toHaveLength(2);
     expect((await api.listSkillVersions(skillIds.withdrawn)).items.some((version) => version.status === "WITHDRAWN")).toBe(true);
+  });
+
+  it("已安装客户端可以查询归档、名称失效和撤回版本状态", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    const archived = await api.getInstallationStatus(skillIds.archived, "8b37c0a5-f1c9-4f4e-a71b-b6f06f671007");
+    expect(archived.status).toBe("ARCHIVED");
+    expect(archived.archiveReason).toBeTruthy();
+
+    const conflicted = await api.getInstallationStatus(skillIds.nameConflict, "8b37c0a5-f1c9-4f4e-a71b-b6f06f671015");
+    expect(conflicted.status).toBe("NAME_CONFLICT");
+    expect(conflicted.nameConflictReason).toBeTruthy();
+
+    const withdrawn = await api.getInstallationStatus(skillIds.withdrawn, "8b37c0a5-f1c9-4f4e-a71b-b6f06f671116");
+    expect(withdrawn.versionStatus).toBe("WITHDRAWN");
+    expect(withdrawn.recommendedVersion?.version).toBe("1.2.0");
   });
 
   it("安装包校验失败时停止签发下载凭证", async () => {

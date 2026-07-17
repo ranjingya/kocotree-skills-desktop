@@ -130,7 +130,7 @@ export interface SkillApi {
   withdrawSkillVersion(skillId: string, versionId: string, input: ReasonDto): Promise<SkillVersionDto>;
   archiveSkill(skillId: string, input: ReasonDto): Promise<SkillDetailDto>;
   restoreSkill(skillId: string): Promise<SkillDetailDto>;
-  getInstallationStatus(skillId: string): Promise<InstallationStatusDto>;
+  getInstallationStatus(skillId: string, versionId?: string): Promise<InstallationStatusDto>;
   createOwnershipTransfer(skillId: string, input: CreateOwnershipTransferDto): Promise<OwnershipTransferDto>;
   acceptOwnershipTransfer(transferId: string): Promise<OwnershipTransferDto>;
   rejectOwnershipTransfer(transferId: string): Promise<OwnershipTransferDto>;

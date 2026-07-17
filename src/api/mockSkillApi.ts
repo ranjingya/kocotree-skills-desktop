@@ -138,7 +138,7 @@ export class MockSkillApi implements SkillApi {
   async listSkills(query: ListSkillsQuery = {}): Promise<SkillPageDto> {
     await this.wait();
     const keyword = query.query?.trim().toLocaleLowerCase() ?? "";
-    let items = this.skills.filter((skill) => skill.status !== "ARCHIVED" && (!query.tagId || skill.tags.some((tag) => tag.id === query.tagId)) && [skill.skillName, skill.displayName, skill.skillDescription, skill.displayDescription, ...skill.tags.map((tag) => tag.name)].join(" ").toLocaleLowerCase().includes(keyword));
+    let items = this.skills.filter((skill) => skill.status === "ACTIVE" && (!query.tagId || skill.tags.some((tag) => tag.id === query.tagId)) && [skill.skillName, skill.displayName, skill.skillDescription, skill.displayDescription, ...skill.tags.map((tag) => tag.name)].join(" ").toLocaleLowerCase().includes(keyword));
     items = [...items].sort((left, right) => {
       if (query.sort === "INSTALLS_DESC") return right.installCount - left.installCount;
       if (query.sort === "CREATED_DESC") return Date.parse(right.createdAt) - Date.parse(left.createdAt);
@@ -338,10 +338,23 @@ export class MockSkillApi implements SkillApi {
     return clone(skill);
   }
 
-  async getInstallationStatus(skillId: string): Promise<InstallationStatusDto> {
+  async getInstallationStatus(skillId: string, versionId?: string): Promise<InstallationStatusDto> {
     await this.wait();
     const skill = this.findSkill(skillId);
-    return { skillId, status: skill.status, archivedAt: skill.archivedAt, archiveReason: skill.archiveReason };
+    const installedVersion = versionId ? (this.versions.get(skillId) ?? []).find((version) => version.id === versionId) : undefined;
+    const withdrawn = installedVersion?.status === "WITHDRAWN";
+    return {
+      skillId,
+      status: skill.status,
+      archivedAt: skill.archivedAt,
+      archiveReason: skill.archiveReason,
+      nameConflictReason: skill.nameConflictReason,
+      versionStatus: installedVersion?.status ?? null,
+      withdrawalReason: installedVersion?.withdrawalReason ?? null,
+      recommendedVersion: withdrawn
+        ? { id: skill.currentVersion.id, version: skill.currentVersion.version }
+        : null,
+    };
   }
 
   async createOwnershipTransfer(skillId: string, input: CreateOwnershipTransferDto): Promise<OwnershipTransferDto> {

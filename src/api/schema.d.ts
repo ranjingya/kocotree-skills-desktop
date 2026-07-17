@@ -616,6 +616,14 @@ export interface components {
             /** Format: date-time */
             archivedAt: string | null;
             archiveReason: string | null;
+            nameConflictReason: string | null;
+            /** @enum {string|null} */
+            versionStatus: "PUBLISHED" | "WITHDRAWN" | null;
+            withdrawalReason: string | null;
+            recommendedVersion: {
+                id: string;
+                version: string;
+            } | null;
         };
         DownloadTicket: {
             /** Format: uri */
@@ -1141,7 +1149,10 @@ export interface operations {
     };
     getInstallationStatus: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 本地安装凭证记录的版本 ID，用于判断该版本是否已撤回。 */
+                versionId?: string;
+            };
             header?: never;
             path: {
                 skillId: components["parameters"]["SkillId"];

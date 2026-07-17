@@ -21,7 +21,7 @@
 | 派生 Skill | 从某个历史版本开始独立发展的新 Skill，拥有新的 `skillName`、Owner 和从 `1.0.0` 开始的版本线。 |
 | 直接来源 | 派生 Skill 保存的 `forkedFromSkillId` 与 `forkedFromVersionId`。多级派生通过直接来源形成完整链路。 |
 | 平台状态 | Skill 的在线生命周期状态，包括 `ACTIVE`、`ARCHIVED` 和 `NAME_CONFLICT`。 |
-| 名称冲突（`NAME_CONFLICT`） | 已发布 Skill 的名称后来成为 Claude、Codex 或平台保留名称时进入的状态；继续公开展示，但禁止安装和更新。 |
+| 名称冲突（`NAME_CONFLICT`） | 已发布 Skill 的名称后来成为 Claude、Codex 或平台保留名称时进入的状态；从公开列表、搜索和公开详情隐藏，禁止安装和更新，本地已安装内容仍可使用。 |
 | 归档 | Owner 或管理员填写原因后将 Skill 从公开列表、搜索和详情中移除；服务端保留完整数据。 |
 | 归档凭证 | 已安装客户端按本地 `skillId` 查询到的最小归档状态，只包含状态、时间和原因。 |
 | 本地解析状态 | 客户端解析 ZIP 后保存在当前上传页面内存中的预览状态，没有服务端编号和过期时间。 |

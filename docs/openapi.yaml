@@ -428,6 +428,12 @@ paths:
         - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/SkillId'
+        - name: versionId
+          in: query
+          required: false
+          description: 本地安装凭证记录的版本 ID，用于判断该版本是否已撤回。
+          schema:
+            type: string
       responses:
         '200':
           description: 最小在线状态
@@ -1122,7 +1128,7 @@ components:
           format: date-time
     InstallationStatus:
       type: object
-      required: [skillId, status, archivedAt, archiveReason]
+      required: [skillId, status, archivedAt, archiveReason, nameConflictReason, versionStatus, withdrawalReason, recommendedVersion]
       properties:
         skillId:
           type: string
@@ -1134,6 +1140,23 @@ components:
           format: date-time
         archiveReason:
           type: [string, 'null']
+        nameConflictReason:
+          type: [string, 'null']
+        versionStatus:
+          type: [string, 'null']
+          enum: [PUBLISHED, WITHDRAWN, null]
+        withdrawalReason:
+          type: [string, 'null']
+        recommendedVersion:
+          oneOf:
+            - type: object
+              required: [id, version]
+              properties:
+                id:
+                  type: string
+                version:
+                  type: string
+            - type: 'null'
     DownloadTicket:
       type: object
       required: [url, expiresAt, packageSha256, contentHash]
