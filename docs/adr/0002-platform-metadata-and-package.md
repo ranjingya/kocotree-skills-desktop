@@ -12,9 +12,12 @@
 - 从 `SKILL.md` frontmatter 提取 `skillName` 和 `skillDescription`。
 - `skillName` 是平台全局唯一身份，创建后不可修改。
 - 平台单独保存 `displayName`、`displayDescription` 和 Tag。
-- 只有 Skill 原上传者可以修改展示信息和 Tag；修改不创建 SkillVersion，也不写回 ZIP 或 `SKILL.md`。
+- `displayName` 只允许当前 Owner 修改；`displayDescription` 和 Tag 允许 Owner 与协作者修改。
+- 平台信息修改不创建 SkillVersion，也不写回 ZIP 或 `SKILL.md`，但保留更新者、时间和变更字段审计。
 - 原始 ZIP 与每个版本的 `SKILL.md` 快照不可变。
-- 发布新版本时，ZIP 中的 `skillName` 必须与 Skill 聚合一致，发布请求不能夹带平台信息字段。
+- 发布新版本时，ZIP 中的 `skillName` 必须与 Skill 聚合一致。版本请求可以携带调用者有权修改的平台信息，并与版本创建使用同一事务。
+- 新版本的 `skillDescription` 发生变化且发布者没有明确提交展示简介时，平台同步 `displayDescription`。
+- 未识别的 frontmatter 字段原样保留在包内，不进入核心 Skill 实体。
 - 展示名称不参与版本匹配，也不决定本地目录。
 
 ## 结果
