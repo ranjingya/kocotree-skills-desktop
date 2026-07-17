@@ -64,6 +64,12 @@ export interface ModalProps {
 export function Modal({ visible, title, width, onCancel, footer, className = "", children, maskClosable = true, closeOnEsc = true }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCancelRef = useRef(onCancel);
+  const titleId = useId();
+
+  useEffect(() => {
+    onCancelRef.current = onCancel;
+  }, [onCancel]);
 
   useEffect(() => {
     if (!visible) return;
@@ -74,7 +80,7 @@ export function Modal({ visible, title, width, onCancel, footer, className = "",
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape" && closeOnEsc) {
         event.preventDefault();
-        onCancel();
+        onCancelRef.current();
         return;
       }
       if (event.key !== "Tab" || !dialogRef.current) return;
@@ -100,16 +106,16 @@ export function Modal({ visible, title, width, onCancel, footer, className = "",
       document.body.style.overflow = previousOverflow;
       previousFocusRef.current?.focus();
     };
-  }, [closeOnEsc, onCancel, visible]);
+  }, [closeOnEsc, visible]);
 
   if (!visible) return null;
   const style: CSSProperties | undefined = width ? { width } : undefined;
   return (
     <div className={`ui-modal-root ${className}`} role="presentation">
       <div className="ui-modal-mask" onMouseDown={(event) => { if (maskClosable && event.target === event.currentTarget) onCancel(); }}>
-        <div ref={dialogRef} className="ui-modal" style={style} role="dialog" aria-modal="true" aria-labelledby="ui-modal-title" tabIndex={-1}>
+        <div ref={dialogRef} className="ui-modal" style={style} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
           <header className="ui-modal-header">
-            <h2 id="ui-modal-title">{title}</h2>
+            <h2 id={titleId}>{title}</h2>
             <button className="ui-modal-close" type="button" aria-label="关闭弹窗" onClick={onCancel}>×</button>
           </header>
           <div className="ui-modal-body">{children}</div>
