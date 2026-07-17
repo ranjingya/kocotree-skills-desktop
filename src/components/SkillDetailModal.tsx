@@ -3,9 +3,9 @@ import { Button, Modal, Select, Spin, TabPane, Tabs, Tag } from "@douyinfe/semi-
 import {
   skillApi,
   SkillApiError,
+  type FileEntryDto,
   type SkillDetailDto,
   type SkillFileContentDto,
-  type SkillFileEntryDto,
   type SkillSummaryDto,
   type SkillVersionDto,
 } from "../api";
@@ -40,8 +40,8 @@ function formatFileSize(bytes: number): string {
  * @param entries - 接口返回的规范化文件条目。
  * @returns 适合从上到下渲染的文件条目数组。
  */
-function orderFileEntries(entries: SkillFileEntryDto[]): SkillFileEntryDto[] {
-  const childrenByParent = new Map<string, SkillFileEntryDto[]>();
+function orderFileEntries(entries: FileEntryDto[]): FileEntryDto[] {
+  const childrenByParent = new Map<string, FileEntryDto[]>();
   for (const entry of entries) {
     const separatorIndex = entry.path.lastIndexOf("/");
     const parentPath = separatorIndex >= 0 ? entry.path.slice(0, separatorIndex) : "";
@@ -50,7 +50,7 @@ function orderFileEntries(entries: SkillFileEntryDto[]): SkillFileEntryDto[] {
     childrenByParent.set(parentPath, children);
   }
 
-  const ordered: SkillFileEntryDto[] = [];
+  const ordered: FileEntryDto[] = [];
   function appendChildren(parentPath: string): void {
     const children = [...(childrenByParent.get(parentPath) ?? [])].sort((left, right) => {
       if (left.type !== right.type) return left.type === "DIRECTORY" ? -1 : 1;
@@ -86,7 +86,7 @@ export function SkillDetailModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fileVersionId, setFileVersionId] = useState("");
-  const [fileEntries, setFileEntries] = useState<SkillFileEntryDto[]>([]);
+  const [fileEntries, setFileEntries] = useState<FileEntryDto[]>([]);
   const [selectedFilePath, setSelectedFilePath] = useState("");
   const [fileContent, setFileContent] = useState<SkillFileContentDto | null>(null);
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
@@ -111,7 +111,7 @@ export function SkillDetailModal({
         if (!active) return;
         setDetail(nextDetail);
         setVersions(versionPage.items);
-        setFileVersionId(nextDetail.latestVersion.id);
+        setFileVersionId(nextDetail.currentVersion.id);
       })
       .catch((reason: unknown) => {
         if (!active) return;
@@ -137,9 +137,9 @@ export function SkillDetailModal({
     skillApi.listVersionFiles(detail.id, fileVersionId)
       .then((result) => {
         if (!active) return;
-        setFileEntries(result.items);
-        const defaultFile = result.items.find((entry) => entry.path === "SKILL.md")
-          ?? result.items.find((entry) => entry.type === "FILE" && entry.previewable);
+        setFileEntries(result);
+        const defaultFile = result.find((entry) => entry.path === "SKILL.md")
+          ?? result.find((entry) => entry.type === "FILE" && entry.previewable);
         setSelectedFilePath(defaultFile?.path ?? "");
       })
       .catch((reason: unknown) => {
@@ -212,7 +212,7 @@ export function SkillDetailModal({
                 theme="solid"
                 type="primary"
                 icon={installedSkillIds.has(detail.id) ? undefined : <AppIcon name="download" size={16} />}
-                onClick={() => onInstall(detail, detail.latestVersion)}
+                onClick={() => onInstall(detail, detail.currentVersion)}
               >
                 {installedSkillIds.has(detail.id) ? "重新安装最新版" : "安装最新版"}
               </Button>
@@ -239,9 +239,9 @@ export function SkillDetailModal({
             {detail.tags.map((tag) => <Tag color="green" key={tag.id}>{tag.name}</Tag>)}
           </div>
           <div className="detail-stats">
-            <div><span>最新版本</span><strong>v{detail.latestVersion.version}</strong></div>
+            <div><span>最新版本</span><strong>v{detail.currentVersion.version}</strong></div>
             <div><span>安装次数</span><strong>{detail.installCount.toLocaleString("zh-CN")}</strong></div>
-            <div><span>原上传者</span><strong>{detail.uploadedBy.name}</strong></div>
+            <div><span>当前 Owner</span><strong>{detail.owner.name}</strong></div>
           </div>
 
           <Tabs type="line">
@@ -253,7 +253,7 @@ export function SkillDetailModal({
                   <div><dt>创建时间</dt><dd>{formatDate(detail.createdAt)}</dd></div>
                   <div><dt>最近更新</dt><dd>{formatDate(detail.updatedAt)}</dd></div>
                   <div><dt>最近更新者</dt><dd>{detail.updatedBy.name}</dd></div>
-                  <div><dt>ZIP 大小</dt><dd>{formatFileSize(detail.latestVersion.packageSize)}</dd></div>
+                  <div><dt>ZIP 大小</dt><dd>{formatFileSize(detail.currentVersion.packageSize)}</dd></div>
                 </dl>
               </section>
             </TabPane>
@@ -327,7 +327,7 @@ export function SkillDetailModal({
                       <header className="file-preview-heading">
                         <strong title={selectedFile.path}>{selectedFile.path}</strong>
                         <span>
-                          {selectedFile.mediaType ?? "二进制文件"}
+                          {selectedFile.previewable ? "文本文件" : "二进制文件"}
                           {selectedFile.size !== null ? ` · ${formatFileSize(selectedFile.size)}` : ""}
                         </span>
                       </header>

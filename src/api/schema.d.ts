@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/auth/device/start": {
+    "/api/auth/device": {
         parameters: {
             query?: never;
             header?: never;
@@ -14,21 +14,21 @@ export interface paths {
         get?: never;
         put?: never;
         /** 发起设备授权 */
-        post: operations["startDeviceAuthorization"];
+        post: operations["createDeviceAuthorization"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/auth/device/poll": {
+    "/api/auth/device/{deviceCode}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** 轮询设备授权结果 */
+        /** 轮询设备授权 */
         get: operations["pollDeviceAuthorization"];
         put?: never;
         post?: never;
@@ -38,7 +38,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/me": {
+    "/api/users/me": {
         parameters: {
             query?: never;
             header?: never;
@@ -55,7 +55,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/tags": {
+    "/api/users/me/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取我的在线 Skill */
+        get: operations["listMySkills"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tags": {
         parameters: {
             query?: never;
             header?: never;
@@ -72,20 +89,17 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/skills": {
+    "/api/skills": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** 获取 Skill 列表 */
+        /** 获取公开 Skill 列表 */
         get: operations["listSkills"];
         put?: never;
-        /**
-         * 创建 Skill
-         * @description 客户端可先在本地解析 ZIP 用于预览；发布时一次性提交原始 ZIP 和平台信息，服务端重新校验包内容。
-         */
+        /** 创建 Skill */
         post: operations["createSkill"];
         delete?: never;
         options?: never;
@@ -93,64 +107,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/skills/{skillId}": {
+    "/api/skills/{skillId}": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                skillId: components["parameters"]["SkillId"];
-            };
+            path?: never;
             cookie?: never;
         };
-        /** 获取 Skill 详情 */
+        /**
+         * 获取 Skill 详情
+         * @description 归档 Skill 仅对其 Owner、协作者和管理员返回完整详情。
+         */
         get: operations["getSkill"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /**
-         * 修改 Skill 平台信息
-         * @description 只有 Skill 原上传者可以修改展示名称、展示简介和 Tag；成功后不创建 SkillVersion。
-         */
+        /** 修改平台展示信息 */
         patch: operations["updateSkillMetadata"];
         trace?: never;
     };
-    "/skills/{skillId}/versions": {
+    "/api/skills/{skillId}/versions": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                skillId: components["parameters"]["SkillId"];
-            };
+            path?: never;
             cookie?: never;
         };
         /** 获取版本历史 */
         get: operations["listSkillVersions"];
         put?: never;
-        /**
-         * 发布新版本
-         * @description 一次性提交原始 ZIP 和版本信息，服务端重新校验包内容及 Skill 名称。
-         */
-        post: operations["createSkillVersion"];
+        /** 发布新版本 */
+        post: operations["publishSkillVersion"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/skills/{skillId}/versions/{versionId}/files": {
+    "/api/skills/{skillId}/versions/{versionId}": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                skillId: components["parameters"]["SkillId"];
-                versionId: components["parameters"]["VersionId"];
-            };
+            path?: never;
             cookie?: never;
         };
-        /** 获取指定版本文件树 */
-        get: operations["listSkillVersionFiles"];
+        /** 获取版本详情 */
+        get: operations["getSkillVersion"];
         put?: never;
         post?: never;
         delete?: never;
@@ -159,18 +163,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/skills/{skillId}/versions/{versionId}/files/content": {
+    "/api/skills/{skillId}/versions/{versionId}/files": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                skillId: components["parameters"]["SkillId"];
-                versionId: components["parameters"]["VersionId"];
-            };
+            path?: never;
             cookie?: never;
         };
-        /** 获取指定文本文件内容 */
-        get: operations["getSkillVersionFileContent"];
+        /** 获取版本文件树 */
+        get: operations["listVersionFiles"];
         put?: never;
         post?: never;
         delete?: never;
@@ -179,18 +180,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/skills/{skillId}/versions/{versionId}/download": {
+    "/api/skills/{skillId}/versions/{versionId}/files/content": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                skillId: components["parameters"]["SkillId"];
-                versionId: components["parameters"]["VersionId"];
-            };
+            path?: never;
             cookie?: never;
         };
-        /** 获取指定版本下载凭证 */
-        get: operations["getSkillVersionDownload"];
+        /** 获取文本文件内容 */
+        get: operations["getVersionFileContent"];
         put?: never;
         post?: never;
         delete?: never;
@@ -199,20 +197,238 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/skills/{skillId}/versions/{versionId}/install-events": {
+    "/api/skills/{skillId}/versions/{versionId}/withdraw": {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                skillId: components["parameters"]["SkillId"];
-                versionId: components["parameters"]["VersionId"];
-            };
+            path?: never;
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** 上报成功安装 */
-        post: operations["recordSkillInstallation"];
+        /** 撤回版本 */
+        post: operations["withdrawSkillVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skills/{skillId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 归档 Skill */
+        post: operations["archiveSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skills/{skillId}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 恢复 Skill */
+        post: operations["restoreSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skills/{skillId}/installation-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询已安装 Skill 的在线状态 */
+        get: operations["getInstallationStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skills/{skillId}/ownership-transfers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 发起所有权转移邀请 */
+        post: operations["createOwnershipTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ownership-transfers/{transferId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 接受所有权转移 */
+        post: operations["acceptOwnershipTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ownership-transfers/{transferId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 拒绝所有权转移 */
+        post: operations["rejectOwnershipTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ownership-transfers/{transferId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 取消所有权转移 */
+        post: operations["cancelOwnershipTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/skills/{skillId}/versions/{versionId}/download-tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 获取版本下载凭证 */
+        post: operations["createDownloadTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/installations/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 通过名称和内容哈希恢复平台关联 */
+        post: operations["resolveInstallation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/installations/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 上报成功安装事件 */
+        post: operations["createInstallationEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取通知 */
+        get: operations["listNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 全部标记已读 */
+        post: operations["readAllNotifications"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/{notificationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 标记单条通知已读 */
+        post: operations["readNotification"];
         delete?: never;
         options?: never;
         head?: never;
@@ -223,267 +439,261 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** Format: uuid */
-        Uuid: string;
-        /** Format: date-time */
-        DateTime: string;
-        /** @example 1.2.0 */
-        SemVer: string;
-        Sha256: string;
-        ApiError: {
-            /** @enum {string} */
-            error: "INVALID_REQUEST" | "INVALID_SKILL_PACKAGE" | "PACKAGE_TOO_LARGE" | "INVALID_SEMVER" | "UNAUTHENTICATED" | "USER_DISABLED" | "NOT_SKILL_OWNER" | "SKILL_NOT_FOUND" | "VERSION_NOT_FOUND" | "FILE_NOT_FOUND" | "FILE_PREVIEW_UNAVAILABLE" | "DUPLICATE_SKILL_NAME" | "SKILL_NAME_MISMATCH" | "VERSION_ALREADY_EXISTS" | "VERSION_NOT_GREATER" | "DOWNLOAD_UNAVAILABLE";
+        ErrorResponse: {
+            error: components["schemas"]["ErrorBody"];
+        };
+        ErrorBody: {
+            code: string;
             message: string;
             details?: {
                 [key: string]: unknown;
-            };
-            requestId?: string;
+            } | null;
         };
         User: {
-            id: components["schemas"]["Uuid"];
+            id: string;
             name: string;
-            /** Format: email */
-            email: string | null;
             /** Format: uri */
             avatarUrl: string | null;
-            /** @description 从上级部门到直接所属部门的名称路径，无法获取时为空数组。 */
             departmentPath: string[];
             /** @enum {string} */
             status: "ACTIVE" | "DISABLED";
+            /** @enum {string} */
+            role: "USER" | "ADMIN";
+            /** Format: date-time */
+            syncedAt: string;
         };
         Tag: {
-            id: components["schemas"]["Uuid"];
+            id: string;
             name: string;
         };
-        SkillVersionSummary: {
-            id: components["schemas"]["Uuid"];
-            version: components["schemas"]["SemVer"];
+        DerivedSource: {
+            skillId: string;
+            skillName: string;
+            versionId: string;
+            version: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "ARCHIVED" | "NAME_CONFLICT";
+            linkable: boolean;
+        };
+        SkillVersion: {
+            id: string;
+            skillId: string;
+            version: string;
+            /** @enum {string} */
+            status: "PUBLISHED" | "WITHDRAWN";
             skillName: string;
             skillDescription: string;
+            changelog: string;
+            baseVersionId: string | null;
             packageSize: number;
-            publishedAt: components["schemas"]["DateTime"];
+            packageSha256: string;
+            contentHash: string;
             uploadedBy: components["schemas"]["User"];
+            /** Format: date-time */
+            publishedAt: string;
+            withdrawnBy: components["schemas"]["User"] | null;
+            /** Format: date-time */
+            withdrawnAt: string | null;
+            withdrawalReason: string | null;
         };
-        SkillVersion: components["schemas"]["SkillVersionSummary"] & {
-            changelog: string | null;
-            packageSha256: components["schemas"]["Sha256"];
-            contentHash: components["schemas"]["Sha256"];
+        SkillVersionDetail: components["schemas"]["SkillVersion"] & {
             skillMd: string;
         };
-        SkillFileEntry: {
+        SkillSummary: {
+            id: string;
+            skillName: string;
+            displayName: string;
+            skillDescription: string;
+            displayDescription: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "ARCHIVED" | "NAME_CONFLICT";
+            owner: components["schemas"]["User"];
+            tags: components["schemas"]["Tag"][];
+            currentVersion: components["schemas"]["SkillVersion"];
+            installCount: number;
+            derivedFrom: components["schemas"]["DerivedSource"] | null;
+            updatedBy: components["schemas"]["User"];
+            /** Format: date-time */
+            archivedAt: string | null;
+            archiveReason: string | null;
+            nameConflictReason: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SkillDetail: components["schemas"]["SkillSummary"] & {
+            collaborators: components["schemas"]["User"][];
+            derivedChain: components["schemas"]["DerivedSource"][];
+        };
+        FileEntry: {
             path: string;
             /** @enum {string} */
             type: "FILE" | "DIRECTORY";
             size: number | null;
-            mediaType: string | null;
+            sha256: string | null;
             previewable: boolean;
         };
-        SkillFileListResponse: {
-            items: components["schemas"]["SkillFileEntry"][];
-        };
-        SkillFileContent: {
+        FileContent: {
             path: string;
-            mediaType: string;
-            /** @constant */
-            encoding: "UTF-8";
-            size: number;
             content: string;
+            sha256: string;
         };
-        SkillSummary: {
-            id: components["schemas"]["Uuid"];
-            skillName: string;
-            displayName: string;
-            skillDescription: string;
-            displayDescription: string;
-            tags: components["schemas"]["Tag"][];
-            latestVersion: components["schemas"]["SkillVersionSummary"];
-            uploadedBy: components["schemas"]["User"];
-            updatedBy: components["schemas"]["User"];
-            installCount: number;
-            createdAt: components["schemas"]["DateTime"];
-            updatedAt: components["schemas"]["DateTime"];
-        };
-        SkillDetail: components["schemas"]["SkillSummary"] & {
-            latestVersion: components["schemas"]["SkillVersion"];
-        };
-        Pagination: {
-            total: number;
-            page: number;
-            pageSize: number;
-        };
-        SkillListResponse: components["schemas"]["Pagination"] & {
-            items: components["schemas"]["SkillSummary"][];
-        };
-        SkillVersionListResponse: components["schemas"]["Pagination"] & {
-            items: components["schemas"]["SkillVersion"][];
-        };
-        TagListResponse: {
-            items: components["schemas"]["Tag"][];
-        };
-        DeviceAuthStartRequest: {
-            clientName?: string;
-            deviceName?: string;
-            /** @enum {string} */
-            platform?: "windows" | "macos" | "linux";
-        };
-        DeviceAuthStartResponse: {
+        DeviceAuthorization: {
             deviceCode: string;
-            userCode: string;
             /** Format: uri */
             verificationUrl: string;
-            expiresAt: components["schemas"]["DateTime"];
-            pollInterval: number;
+            expiresIn: number;
+            interval: number;
         };
-        DeviceAuthPendingResponse: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            status: "DeviceAuthPendingResponse";
-            pollInterval: number;
-        };
-        DeviceAuthAuthorizedResponse: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            status: "DeviceAuthAuthorizedResponse";
+        AuthTokenResponse: {
+            accessToken: string;
+            /** @constant */
+            tokenType: "Bearer";
+            expiresIn: number;
             user: components["schemas"]["User"];
-            token: string;
-            /** Format: date-time */
-            expiresAt: string | null;
-        };
-        DeviceAuthTerminalResponse: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            status: "DeviceAuthTerminalResponse";
-        };
-        CurrentUserResponse: {
-            user: components["schemas"]["User"];
-            scopes: string[];
         };
         CreateSkillRequest: {
-            /**
-             * Format: binary
-             * @description 最大 50 MB 的原始 Skill ZIP
-             */
+            /** Format: binary */
             file: string;
             displayName: string;
             displayDescription: string;
-            tags: components["schemas"]["TagAssignmentInput"];
-            version: components["schemas"]["SemVer"];
-            changelog?: string;
+            tagIds?: string[];
+            newTagNames?: string[];
+            forkedFromSkillId?: string;
+            forkedFromVersionId?: string;
+            /** @default false */
+            confirmDuplicateDisplayName: boolean;
         };
-        CreateSkillVersionRequest: {
-            /**
-             * Format: binary
-             * @description 最大 50 MB 的原始 Skill ZIP
-             */
+        PublishVersionRequest: {
+            /** Format: binary */
             file: string;
-            version: components["schemas"]["SemVer"];
+            baseVersionId: string;
+            version: string;
             changelog: string;
-        };
-        UpdateSkillMetadataRequest: {
             displayName?: string;
             displayDescription?: string;
-            tags?: components["schemas"]["TagAssignmentInput"];
+            tagIds?: string[];
+            newTagNames?: string[];
+            /** @default false */
+            confirmDuplicateDisplayName: boolean;
         };
-        /** @description tagIds 与 newTagNames 合并、规范化和去重后最多 5 个 Tag。 */
-        TagAssignmentInput: {
-            tagIds: components["schemas"]["Uuid"][];
-            newTagNames: string[];
+        UpdateSkillRequest: {
+            displayName?: string;
+            displayDescription?: string;
+            tagIds?: string[];
+            newTagNames?: string[];
+            /** @default false */
+            confirmDuplicateDisplayName: boolean;
+        } | unknown | unknown | unknown | unknown;
+        ReasonRequest: {
+            reason: string;
+        };
+        CreateOwnershipTransferRequest: {
+            targetUserId: string;
+            reason?: string | null;
+        };
+        OwnershipTransfer: {
+            id: string;
+            skillId: string;
+            fromOwner: components["schemas"]["User"];
+            targetUser: components["schemas"]["User"];
+            /** @enum {string} */
+            status: "PENDING" | "ACCEPTED" | "REJECTED" | "CANCELED" | "EXPIRED";
+            reason: string | null;
+            createdBy: components["schemas"]["User"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            resolvedAt: string | null;
+        };
+        InstallationStatus: {
+            skillId: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "ARCHIVED" | "NAME_CONFLICT";
+            /** Format: date-time */
+            archivedAt: string | null;
+            archiveReason: string | null;
         };
         DownloadTicket: {
             /** Format: uri */
             url: string;
-            expiresAt: components["schemas"]["DateTime"];
-            packageSize: number;
-            packageSha256: components["schemas"]["Sha256"];
-            contentHash: components["schemas"]["Sha256"];
+            /** Format: date-time */
+            expiresAt: string;
+            packageSha256: string;
+            contentHash: string;
+        };
+        ResolveInstallationRequest: {
+            skillName: string;
+            contentHash: string;
+        };
+        InstallationResolution: {
+            matched: boolean;
+            skillId: string | null;
+            versionId: string | null;
+            /** @enum {string|null} */
+            status: "ACTIVE" | "ARCHIVED" | "NAME_CONFLICT" | null;
+            /** Format: date-time */
+            archivedAt: string | null;
+            archiveReason: string | null;
         };
         InstallationEventRequest: {
-            eventId: components["schemas"]["Uuid"];
-            deviceId: string;
-            /** @enum {string} */
-            platform: "windows" | "macos" | "linux";
-            clientVersion: components["schemas"]["SemVer"];
-            installedAt: components["schemas"]["DateTime"];
+            eventId: string;
+            skillId: string;
+            versionId: string;
+            /** Format: date-time */
+            installedAt: string;
         };
-        InstallationEventResponse: {
-            recorded: boolean;
-            installCount: number;
+        Notification: {
+            id: string;
+            /** @enum {string} */
+            type: "VERSION_PUBLISHED" | "METADATA_UPDATED" | "OWNERSHIP_TRANSFER" | "SKILL_STATUS_CHANGED";
+            title: string;
+            body: string;
+            skillId: string | null;
+            /** Format: date-time */
+            readAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        SkillPage: {
+            items: components["schemas"]["SkillSummary"][];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        VersionPage: {
+            items: components["schemas"]["SkillVersion"][];
+            page: number;
+            pageSize: number;
+            total: number;
+        };
+        NotificationPage: {
+            items: components["schemas"]["Notification"][];
+            page: number;
+            pageSize: number;
+            total: number;
+            unreadCount: number;
         };
     };
     responses: {
-        /** @description 请求参数或业务校验失败 */
-        BadRequest: {
+        /** @description 请求失败 */
+        ErrorResponse: {
             headers: {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["ApiError"];
-            };
-        };
-        /** @description 未提供有效访问令牌 */
-        Unauthorized: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ApiError"];
-            };
-        };
-        /** @description 当前用户被停用或无权执行操作 */
-        Forbidden: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ApiError"];
-            };
-        };
-        /** @description 请求的资源不存在 */
-        NotFound: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ApiError"];
-            };
-        };
-        /** @description 资源身份、Skill 名称或版本发生冲突 */
-        Conflict: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ApiError"];
-            };
-        };
-        /** @description 文件类型不支持文本预览 */
-        UnsupportedMediaType: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ApiError"];
-            };
-        };
-        /** @description 下载服务暂时不可用 */
-        ServiceUnavailable: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["ApiError"];
+                "application/json": components["schemas"]["ErrorResponse"];
             };
         };
     };
     parameters: {
+        DeviceCode: string;
         SkillId: string;
         VersionId: string;
+        TransferId: string;
         Page: number;
         PageSize: number;
     };
@@ -493,18 +703,14 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    startDeviceAuthorization: {
+    createDeviceAuthorization: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["DeviceAuthStartRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description 授权会话已创建 */
             201: {
@@ -512,34 +718,45 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeviceAuthStartResponse"];
+                    "application/json": components["schemas"]["DeviceAuthorization"];
                 };
             };
-            400: components["responses"]["BadRequest"];
+            default: components["responses"]["ErrorResponse"];
         };
     };
     pollDeviceAuthorization: {
         parameters: {
-            query: {
-                deviceCode: string;
-            };
+            query?: never;
             header?: never;
-            path?: never;
+            path: {
+                deviceCode: components["parameters"]["DeviceCode"];
+            };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description 当前授权状态 */
+            /** @description 授权成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeviceAuthPendingResponse"] | components["schemas"]["DeviceAuthAuthorizedResponse"] | components["schemas"]["DeviceAuthTerminalResponse"];
+                    "application/json": components["schemas"]["AuthTokenResponse"];
                 };
             };
-            400: components["responses"]["BadRequest"];
-            404: components["responses"]["NotFound"];
+            /** @description 等待用户完成授权 */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        status: "PENDING";
+                    };
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
         };
     };
     getCurrentUser: {
@@ -551,24 +768,47 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 当前用户和权限范围 */
+            /** @description 当前用户 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CurrentUserResponse"];
+                    "application/json": components["schemas"]["User"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    listMySkills: {
+        parameters: {
+            query: {
+                relation: "OWNED" | "COLLABORATED" | "ARCHIVED";
+                page?: components["parameters"]["Page"];
+                pageSize?: components["parameters"]["PageSize"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Skill 分页 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillPage"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
         };
     };
     listTags: {
         parameters: {
             query?: {
-                /** @description 按 Tag 名称模糊搜索 */
-                q?: string;
+                query?: string;
             };
             header?: never;
             path?: never;
@@ -582,21 +822,18 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TagListResponse"];
+                    "application/json": components["schemas"]["Tag"][];
                 };
             };
-            400: components["responses"]["BadRequest"];
+            default: components["responses"]["ErrorResponse"];
         };
     };
     listSkills: {
         parameters: {
             query?: {
-                /** @description 搜索 Skill 名称、展示名称、Skill 描述、展示简介和 Tag */
-                q?: string;
-                /** @description Tag UUID */
-                tagId?: components["schemas"]["Uuid"];
-                /** @description created 按创建时间，updated 按最新版本发布时间，popular 按安装次数倒序。 */
-                sort?: "created" | "updated" | "popular";
+                query?: string;
+                tagId?: string;
+                sort?: "UPDATED_DESC" | "CREATED_DESC" | "INSTALLS_DESC";
                 page?: components["parameters"]["Page"];
                 pageSize?: components["parameters"]["PageSize"];
             };
@@ -606,16 +843,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Skill 分页列表 */
+            /** @description Skill 分页 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillListResponse"];
+                    "application/json": components["schemas"]["SkillPage"];
                 };
             };
-            400: components["responses"]["BadRequest"];
+            default: components["responses"]["ErrorResponse"];
         };
     };
     createSkill: {
@@ -640,11 +877,7 @@ export interface operations {
                     "application/json": components["schemas"]["SkillDetail"];
                 };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            default: components["responses"]["ErrorResponse"];
         };
     };
     getSkill: {
@@ -667,7 +900,7 @@ export interface operations {
                     "application/json": components["schemas"]["SkillDetail"];
                 };
             };
-            404: components["responses"]["NotFound"];
+            default: components["responses"]["ErrorResponse"];
         };
     };
     updateSkillMetadata: {
@@ -681,11 +914,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateSkillMetadataRequest"];
+                "application/json": components["schemas"]["UpdateSkillRequest"];
             };
         };
         responses: {
-            /** @description 平台信息已更新 */
+            /** @description Skill 已更新 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -694,10 +927,7 @@ export interface operations {
                     "application/json": components["schemas"]["SkillDetail"];
                 };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            default: components["responses"]["ErrorResponse"];
         };
     };
     listSkillVersions: {
@@ -714,20 +944,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 按 SemVer 从高到低排列的版本列表 */
+            /** @description 版本分页 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillVersionListResponse"];
+                    "application/json": components["schemas"]["VersionPage"];
                 };
             };
-            400: components["responses"]["BadRequest"];
-            404: components["responses"]["NotFound"];
+            default: components["responses"]["ErrorResponse"];
         };
     };
-    createSkillVersion: {
+    publishSkillVersion: {
         parameters: {
             query?: never;
             header?: never;
@@ -738,7 +967,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["CreateSkillVersionRequest"];
+                "multipart/form-data": components["schemas"]["PublishVersionRequest"];
             };
         };
         responses: {
@@ -751,14 +980,10 @@ export interface operations {
                     "application/json": components["schemas"]["SkillDetail"];
                 };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            default: components["responses"]["ErrorResponse"];
         };
     };
-    listSkillVersionFiles: {
+    getSkillVersion: {
         parameters: {
             query?: never;
             header?: never;
@@ -770,22 +995,45 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 规范化并按目录优先排序的文件条目 */
+            /** @description 版本详情 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillFileListResponse"];
+                    "application/json": components["schemas"]["SkillVersionDetail"];
                 };
             };
-            404: components["responses"]["NotFound"];
+            default: components["responses"]["ErrorResponse"];
         };
     };
-    getSkillVersionFileContent: {
+    listVersionFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: components["parameters"]["SkillId"];
+                versionId: components["parameters"]["VersionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 文件清单 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileEntry"][];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    getVersionFileContent: {
         parameters: {
             query: {
-                /** @description 文件树接口返回的规范化相对路径 */
                 path: string;
             };
             header?: never;
@@ -797,48 +1045,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description UTF-8 文本文件内容 */
+            /** @description 文本文件内容 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillFileContent"];
+                    "application/json": components["schemas"]["FileContent"];
                 };
             };
-            400: components["responses"]["BadRequest"];
-            404: components["responses"]["NotFound"];
-            415: components["responses"]["UnsupportedMediaType"];
+            default: components["responses"]["ErrorResponse"];
         };
     };
-    getSkillVersionDownload: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                skillId: components["parameters"]["SkillId"];
-                versionId: components["parameters"]["VersionId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 临时下载地址和校验信息 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DownloadTicket"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            503: components["responses"]["ServiceUnavailable"];
-        };
-    };
-    recordSkillInstallation: {
+    withdrawSkillVersion: {
         parameters: {
             query?: never;
             header?: never;
@@ -850,23 +1069,330 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["InstallationEventRequest"];
+                "application/json": components["schemas"]["ReasonRequest"];
             };
         };
         responses: {
-            /** @description 幂等安装事件处理结果 */
+            /** @description 版本已撤回 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InstallationEventResponse"];
+                    "application/json": components["schemas"]["SkillVersion"];
                 };
             };
-            400: components["responses"]["BadRequest"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    archiveSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: components["parameters"]["SkillId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Skill 已归档 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillDetail"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    restoreSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: components["parameters"]["SkillId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Skill 已恢复 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillDetail"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    getInstallationStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: components["parameters"]["SkillId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 最小在线状态 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationStatus"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    createOwnershipTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: components["parameters"]["SkillId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOwnershipTransferRequest"];
+            };
+        };
+        responses: {
+            /** @description 邀请已创建 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipTransfer"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    acceptOwnershipTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transferId: components["parameters"]["TransferId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已接受 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipTransfer"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    rejectOwnershipTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transferId: components["parameters"]["TransferId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已拒绝 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipTransfer"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    cancelOwnershipTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transferId: components["parameters"]["TransferId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已取消 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipTransfer"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    createDownloadTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skillId: components["parameters"]["SkillId"];
+                versionId: components["parameters"]["VersionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 下载凭证 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadTicket"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    resolveInstallation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveInstallationRequest"];
+            };
+        };
+        responses: {
+            /** @description 匹配结果 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationResolution"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    createInstallationEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstallationEventRequest"];
+            };
+        };
+        responses: {
+            /** @description 已记录或幂等接受 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    listNotifications: {
+        parameters: {
+            query?: {
+                unreadOnly?: boolean;
+                page?: components["parameters"]["Page"];
+                pageSize?: components["parameters"]["PageSize"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 通知分页 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPage"];
+                };
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    readAllNotifications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已全部标记已读 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["ErrorResponse"];
+        };
+    };
+    readNotification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 已标记已读 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["ErrorResponse"];
         };
     };
 }

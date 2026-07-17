@@ -238,6 +238,7 @@ export async function inspectSkillZip(buffer: ArrayBuffer): Promise<ZipInspectio
       path: normalizedPath,
       type: "FILE",
       size,
+      sha256: null,
       mediaType,
       previewable: mediaType !== null,
     });
@@ -262,7 +263,9 @@ export async function inspectSkillZip(buffer: ArrayBuffer): Promise<ZipInspectio
     if (totalUncompressedSize > MAX_UNCOMPRESSED_SIZE) {
       throw new SkillApiError("PACKAGE_TOO_LARGE", "ZIP 解压后的总大小不能超过 200 MB");
     }
-    manifestLines.push(`${fileEntry.path}\0${await digestHex(toArrayBuffer(bytes))}\n`);
+    const fileHash = await digestHex(toArrayBuffer(bytes));
+    fileEntry.sha256 = `sha256:${fileHash}`;
+    manifestLines.push(`${fileEntry.path}\0${fileHash}\n`);
   }
 
   const skillMdEntry = archive.file(skillMdOriginalPath);
@@ -284,6 +287,7 @@ export async function inspectSkillZip(buffer: ArrayBuffer): Promise<ZipInspectio
       path,
       type: "DIRECTORY",
       size: null,
+      sha256: null,
       mediaType: null,
       previewable: false,
     })),

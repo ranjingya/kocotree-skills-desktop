@@ -24,6 +24,11 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function nextPatchVersion(version: string): string {
+  const [major = "1", minor = "0", patch = "0"] = version.split(/[+-]/)[0].split(".");
+  return `${major}.${minor}.${Number(patch) + 1}`;
+}
+
 /**
  * 功能说明：在本地解析 ZIP，并在用户确认后一次性创建 Skill 或发布指定 Skill 新版本。
  * @param targetSkill - 从详情页进入时绑定的目标 Skill，新建流程为 null。
@@ -47,7 +52,7 @@ export function UploadPage({
   const [newTagInputVisible, setNewTagInputVisible] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [displayDescription, setDisplayDescription] = useState("");
-  const [version, setVersion] = useState(targetSkill ? "" : "1.0.0");
+  const [version, setVersion] = useState(targetSkill ? nextPatchVersion(targetSkill.currentVersion.version) : "1.0.0");
   const [changelog, setChangelog] = useState("");
   const [inspecting, setInspecting] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -60,7 +65,7 @@ export function UploadPage({
   }, []);
 
   useEffect(() => {
-    setVersion(targetSkill ? "" : "1.0.0");
+    setVersion(targetSkill ? nextPatchVersion(targetSkill.currentVersion.version) : "1.0.0");
     setChangelog("");
     setError("");
     if (!targetSkill && inspection) {
@@ -130,8 +135,10 @@ export function UploadPage({
       if (targetSkill) {
         result = await skillApi.publishSkillVersion(targetSkill.id, {
           file: selectedFile,
+          baseVersionId: targetSkill.currentVersion.id,
           version,
           changelog,
+          confirmDuplicateDisplayName: false,
         });
       } else {
         const createdTags = newTagNames.split(/[,，]/).map((name) => name.trim()).filter(Boolean);
@@ -142,14 +149,14 @@ export function UploadPage({
           file: selectedFile,
           displayName,
           displayDescription,
-          tags: { tagIds: selectedTagIds, newTagNames: createdTags },
-          version,
-          changelog: changelog || undefined,
+          tagIds: selectedTagIds,
+          newTagNames: createdTags,
+          confirmDuplicateDisplayName: false,
         });
       }
       console.info("[KocotreeSkills] Skill 发布完成", {
         skillId: result.id,
-        version: result.latestVersion.version,
+        version: result.currentVersion.version,
       });
       onPublished(result);
     } catch (reason) {
@@ -270,9 +277,9 @@ export function UploadPage({
 
             <div className="form-grid version-form-grid">
               {targetSkill && (
-                <label className="field"><span>版本号</span><input required value={version} onChange={(event) => setVersion(event.currentTarget.value)} placeholder={`高于 ${targetSkill.latestVersion.version}`} /></label>
+                <label className="field"><span>版本号</span><input required value={version} onChange={(event) => setVersion(event.currentTarget.value)} placeholder={`高于 ${targetSkill.currentVersion.version}`} /></label>
               )}
-              <label className="field field-wide"><span>更新说明{targetSkill ? "（必填）" : "（选填）"}</span><textarea required={Boolean(targetSkill)} value={changelog} onChange={(event) => setChangelog(event.currentTarget.value)} placeholder="说明本次发布包含的主要内容" /></label>
+              <label className="field field-wide"><span>更新说明{targetSkill ? "（必填）" : ""}</span><textarea required={Boolean(targetSkill)} value={changelog} onChange={(event) => setChangelog(event.currentTarget.value)} placeholder={targetSkill ? "请说明本次更新内容，例如：优化触发条件，补充使用示例。" : "首次发布"} /></label>
             </div>
           </>
         )}

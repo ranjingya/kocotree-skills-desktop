@@ -68,7 +68,7 @@ function SkillCard({
       </div>
 
       <div className="skill-card-meta">
-        <span className="source-badge">@{skill.uploadedBy.name}</span>
+        <span className="source-badge">@{skill.owner.name}</span>
         <span className="download-count">
           <AppIcon name="download" size={14} />
           {skill.installCount.toLocaleString("zh-CN")}
@@ -126,7 +126,8 @@ function BrowsePage({
     const timer = window.setTimeout(() => {
       setLoading(true);
       setError("");
-      skillApi.listSkills({ q: query || undefined, tagId: tagId === "all" ? undefined : tagId, sort })
+      const apiSort = sort === "popular" ? "INSTALLS_DESC" : sort === "created" ? "CREATED_DESC" : "UPDATED_DESC";
+      skillApi.listSkills({ query: query || undefined, tagId: tagId === "all" ? undefined : tagId, sort: apiSort })
         .then((result) => {
           if (active) setSkills(result.items);
         })
@@ -324,7 +325,7 @@ function App() {
    */
   function handleInstall(skill: SkillSummaryDto): void {
     requireAuth(() => {
-      void installSkillVersion(skill, skill.latestVersion.id, skill.latestVersion.version);
+      void installSkillVersion(skill, skill.currentVersion.id, skill.currentVersion.version);
     });
   }
 
@@ -351,19 +352,18 @@ function App() {
       console.info("[KocotreeSkills] 已获取模拟下载凭证", {
         skillId: skill.id,
         versionId,
-        packageSize: ticket.packageSize,
+        packageSha256: ticket.packageSha256,
         target: "~/.agents/skills",
       });
-      const result = await skillApi.recordInstallation(skill.id, versionId, {
+      await skillApi.recordInstallation({
         eventId: crypto.randomUUID(),
-        deviceId: "mock-windows-device",
-        platform: "windows",
-        clientVersion: "0.1.0",
+        skillId: skill.id,
+        versionId,
         installedAt: new Date().toISOString(),
       });
       setInstalledSkillIds((currentIds) => new Set(currentIds).add(skill.id));
       setBrowseRefreshKey((current) => current + 1);
-      Toast.success(`模拟安装完成，正式版将写入 ~/.agents/skills（累计 ${result.installCount} 次）`);
+      Toast.success("模拟安装完成，正式版将写入 ~/.agents/skills");
     } catch (reason) {
       console.error("[KocotreeSkills] Skill 模拟安装失败", reason);
       Toast.error(reason instanceof SkillApiError ? reason.message : "安装失败，请稍后重试");
@@ -390,7 +390,7 @@ function App() {
     setUploadTargetSkill(null);
     setActivePage("browse");
     setSelectedSkill(skill);
-    Toast.success(`${skill.displayName} v${skill.latestVersion.version} 发布成功`);
+    Toast.success(`${skill.displayName} v${skill.currentVersion.version} 发布成功`);
   }
 
   return (
@@ -433,7 +433,7 @@ function App() {
                     <span className="user-avatar">{currentUser.name.slice(0, 1)}</span>
                     <span>
                       <strong>{currentUser.name}</strong>
-                      <small>{currentUser.email ?? "模拟飞书用户"}</small>
+                      <small>{currentUser.departmentPath.join(" · ") || "部门信息暂无"}</small>
                     </span>
                   </div>
                   <Dropdown.Menu>

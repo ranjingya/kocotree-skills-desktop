@@ -1,24 +1,33 @@
 import {
   SkillApiError,
+  type CreateOwnershipTransferDto,
   type CreateSkillDto,
   type DownloadTicketDto,
+  type FileEntryDto,
   type InstallationEventDto,
-  type InstallationEventResponseDto,
+  type InstallationResolutionDto,
+  type InstallationStatusDto,
+  type ListMySkillsQuery,
+  type ListNotificationsQuery,
   type ListSkillsQuery,
   type ListVersionsQuery,
+  type NotificationPageDto,
+  type OwnershipTransferDto,
   type PublishSkillVersionDto,
+  type ReasonDto,
   type SkillApi,
   type SkillDetailDto,
   type SkillFileContentDto,
-  type SkillFileListResponseDto,
-  type SkillListResponseDto,
+  type SkillPageDto,
+  type SkillVersionDetailDto,
   type SkillVersionDto,
-  type SkillVersionListResponseDto,
   type TagDto,
   type UpdateSkillMetadataDto,
   type UserDto,
+  type VersionPageDto,
 } from "./contracts";
 import {
+  mockNotifications,
   mockSkillDetails,
   mockTags,
   mockUsers,
@@ -26,11 +35,8 @@ import {
   mockVersions,
   type MockVersionFileSource,
 } from "./mockData";
-import {
-  readArchiveText,
-  type SkillArchiveSource,
-} from "./zipInspector";
 import { parseSkillPackage } from "./skillPackage";
+import { readArchiveText, type SkillArchiveSource } from "./zipInspector";
 
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
@@ -46,56 +52,33 @@ function clone<T>(value: T): T {
 }
 
 function compareSemVer(left: string, right: string): number {
-  const [leftVersion, leftPrerelease] = left.split("+")[0].split("-");
-  const [rightVersion, rightPrerelease] = right.split("+")[0].split("-");
-  const leftParts = leftVersion.split(".").map(Number);
-  const rightParts = rightVersion.split(".").map(Number);
+  const leftParts = left.split(/[+-]/)[0].split(".").map(Number);
+  const rightParts = right.split(/[+-]/)[0].split(".").map(Number);
   for (let index = 0; index < 3; index += 1) {
-    if (leftParts[index] !== rightParts[index]) {
-      return leftParts[index] - rightParts[index];
-    }
+    if (leftParts[index] !== rightParts[index]) return leftParts[index] - rightParts[index];
   }
-  if (!leftPrerelease && !rightPrerelease) return 0;
-  if (!leftPrerelease) return 1;
-  if (!rightPrerelease) return -1;
-  const leftIdentifiers = leftPrerelease.split(".");
-  const rightIdentifiers = rightPrerelease.split(".");
-  const length = Math.max(leftIdentifiers.length, rightIdentifiers.length);
-  for (let index = 0; index < length; index += 1) {
-    const leftIdentifier = leftIdentifiers[index];
-    const rightIdentifier = rightIdentifiers[index];
-    if (leftIdentifier === undefined) return -1;
-    if (rightIdentifier === undefined) return 1;
-    if (leftIdentifier === rightIdentifier) continue;
-    const leftNumeric = /^\d+$/.test(leftIdentifier);
-    const rightNumeric = /^\d+$/.test(rightIdentifier);
-    if (leftNumeric && rightNumeric) return Number(leftIdentifier) - Number(rightIdentifier);
-    if (leftNumeric) return -1;
-    if (rightNumeric) return 1;
-    return leftIdentifier.localeCompare(rightIdentifier);
-  }
-  return 0;
+  return left.localeCompare(right);
 }
 
 /**
- * 功能说明：提供与正式 HTTP 接口相同边界的内存模拟实现。
- * 构造参数 options - 控制模拟延迟和初始登录用户。
+ * 功能说明：提供与正式 HTTP 接口相同业务边界的内存模拟服务。
+ * @param options - 模拟延迟和初始登录用户配置。
+ * @returns 可注入 React 页面使用的 SkillApi 实例。
  */
 export class MockSkillApi implements SkillApi {
   private readonly delayMs: number;
   private readonly skills = clone(mockSkillDetails);
-  private readonly versions = new Map(
-    Object.entries(mockVersions).map(([skillId, versions]) => [skillId, clone(versions)]),
-  );
+  private readonly versions = new Map(Object.entries(mockVersions).map(([id, items]) => [id, clone(items)]));
   private readonly tags = clone(mockTags);
-  private readonly versionFiles = new Map<string, StoredVersionFileSource>(
-    Object.entries(mockVersionFiles).map(([versionId, source]) => [versionId, clone(source)]),
-  );
+  private readonly versionFiles = new Map<string, StoredVersionFileSource>(Object.entries(mockVersionFiles).map(([id, source]) => [id, clone(source)]));
+  private readonly versionSkillMd = new Map(Object.entries(mockVersionFiles).map(([id, source]) => [id, source.skillMd]));
   private readonly installationEvents = new Set<string>();
+  private readonly notifications = clone(mockNotifications);
+  private readonly transfers: OwnershipTransferDto[] = [];
   private currentUser: UserDto | null;
 
   constructor(options: MockSkillApiOptions = {}) {
-    this.delayMs = options.delayMs ?? 280;
+    this.delayMs = options.delayMs ?? 220;
     this.currentUser = options.initialUser ?? null;
   }
 
@@ -104,74 +87,85 @@ export class MockSkillApi implements SkillApi {
   }
 
   private requireUser(): UserDto {
-    if (!this.currentUser) {
-      throw new SkillApiError("UNAUTHENTICATED", "请先登录后再继续操作");
-    }
-    if (this.currentUser.status === "DISABLED") {
-      throw new SkillApiError("USER_DISABLED", "当前用户已停用，请联系管理员");
-    }
+    if (!this.currentUser) throw new SkillApiError("UNAUTHENTICATED", "请先登录后再继续操作");
+    if (this.currentUser.status === "DISABLED") throw new SkillApiError("USER_DISABLED", "当前用户已停用，请联系管理员");
     return this.currentUser;
   }
 
   private findSkill(skillId: string): SkillDetailDto {
     const skill = this.skills.find((item) => item.id === skillId);
-    if (!skill) {
-      throw new SkillApiError("SKILL_NOT_FOUND", "没有找到该 Skill");
-    }
+    if (!skill) throw new SkillApiError("SKILL_NOT_FOUND", "没有找到该 Skill");
     return skill;
   }
 
   private findVersion(skillId: string, versionId: string): SkillVersionDto {
     this.findSkill(skillId);
     const version = (this.versions.get(skillId) ?? []).find((item) => item.id === versionId);
-    if (!version) {
-      throw new SkillApiError("VERSION_NOT_FOUND", "没有找到该 Skill 版本");
-    }
+    if (!version) throw new SkillApiError("VERSION_NOT_FOUND", "没有找到该 Skill 版本");
     return version;
   }
 
-  private resolveTags(tagIds: string[], newTagNames: string[]): TagDto[] {
+  private canCollaborate(skill: SkillDetailDto, user: UserDto): boolean {
+    return user.role === "ADMIN" || skill.owner.id === user.id || skill.collaborators.some((item) => item.id === user.id);
+  }
+
+  private resolveTags(tagIds: string[] = [], newTagNames: string[] = []): TagDto[] {
     const selected = this.tags.filter((tag) => tagIds.includes(tag.id));
-    const normalizedNames = newTagNames.map((name) => name.trim()).filter(Boolean);
-    for (const name of normalizedNames) {
+    for (const rawName of newTagNames) {
+      const name = rawName.trim();
+      if (!name) continue;
       let tag = this.tags.find((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase());
       if (!tag) {
         tag = { id: crypto.randomUUID(), name };
         this.tags.push(tag);
       }
-      if (!selected.some((item) => item.id === tag.id)) {
-        selected.push(tag);
-      }
+      if (!selected.some((item) => item.id === tag.id)) selected.push(tag);
     }
-    if (selected.length > 5) {
-      throw new SkillApiError("INVALID_REQUEST", "每个 Skill 最多选择 5 个 Tag");
-    }
+    if (selected.length > 5) throw new SkillApiError("INVALID_REQUEST", "每个 Skill 最多选择 5 个 Tag");
     return selected;
   }
 
-  async listSkills(query: ListSkillsQuery = {}): Promise<SkillListResponseDto> {
+  private checkDisplayName(displayName: string, confirmed = false, excludedSkillId?: string): void {
+    const conflicts = this.skills.filter((item) => item.id !== excludedSkillId && item.displayName === displayName);
+    if (conflicts.length > 0 && !confirmed) {
+      throw new SkillApiError("DISPLAY_NAME_CONFIRMATION_REQUIRED", "平台中存在同名展示名称，请确认后继续", {
+        conflicts: conflicts.map((item) => ({ id: item.id, displayName: item.displayName, skillName: item.skillName })),
+      });
+    }
+  }
+
+  async listSkills(query: ListSkillsQuery = {}): Promise<SkillPageDto> {
     await this.wait();
-    const keyword = query.q?.trim().toLocaleLowerCase() ?? "";
-    let items = this.skills.filter((skill) => {
-      const searchable = [skill.skillName, skill.displayName, skill.skillDescription, skill.displayDescription, ...skill.tags.map((tag) => tag.name)].join(" ").toLocaleLowerCase();
-      const matchesTag = !query.tagId || skill.tags.some((tag) => tag.id === query.tagId);
-      return matchesTag && searchable.includes(keyword);
-    });
-    const sort = query.sort ?? "updated";
+    const keyword = query.query?.trim().toLocaleLowerCase() ?? "";
+    let items = this.skills.filter((skill) => skill.status !== "ARCHIVED" && (!query.tagId || skill.tags.some((tag) => tag.id === query.tagId)) && [skill.skillName, skill.displayName, skill.skillDescription, skill.displayDescription, ...skill.tags.map((tag) => tag.name)].join(" ").toLocaleLowerCase().includes(keyword));
     items = [...items].sort((left, right) => {
-      if (sort === "popular") return right.installCount - left.installCount;
-      if (sort === "created") return Date.parse(right.createdAt) - Date.parse(left.createdAt);
+      if (query.sort === "INSTALLS_DESC") return right.installCount - left.installCount;
+      if (query.sort === "CREATED_DESC") return Date.parse(right.createdAt) - Date.parse(left.createdAt);
       return Date.parse(right.updatedAt) - Date.parse(left.updatedAt);
     });
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
-    const start = (page - 1) * pageSize;
-    return { items: clone(items.slice(start, start + pageSize)), total: items.length, page, pageSize };
+    return { items: clone(items.slice((page - 1) * pageSize, page * pageSize)), total: items.length, page, pageSize };
+  }
+
+  async listMySkills(query: ListMySkillsQuery): Promise<SkillPageDto> {
+    await this.wait();
+    const user = this.requireUser();
+    const items = this.skills.filter((skill) => {
+      if (query.relation === "ARCHIVED") return skill.status === "ARCHIVED" && this.canCollaborate(skill, user);
+      if (query.relation === "OWNED") return skill.owner.id === user.id && skill.status !== "ARCHIVED";
+      return skill.collaborators.some((item) => item.id === user.id) && skill.status !== "ARCHIVED";
+    });
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    return { items: clone(items.slice((page - 1) * pageSize, page * pageSize)), total: items.length, page, pageSize };
   }
 
   async getSkill(skillId: string): Promise<SkillDetailDto> {
     await this.wait();
-    return clone(this.findSkill(skillId));
+    const skill = this.findSkill(skillId);
+    if (skill.status === "ARCHIVED" && (!this.currentUser || !this.canCollaborate(skill, this.currentUser))) throw new SkillApiError("SKILL_NOT_FOUND", "没有找到该 Skill");
+    return clone(skill);
   }
 
   async listTags(query = ""): Promise<TagDto[]> {
@@ -180,84 +174,77 @@ export class MockSkillApi implements SkillApi {
     return clone(this.tags.filter((tag) => tag.name.toLocaleLowerCase().includes(keyword)));
   }
 
-  async listSkillVersions(skillId: string, query: ListVersionsQuery = {}): Promise<SkillVersionListResponseDto> {
+  async listSkillVersions(skillId: string, query: ListVersionsQuery = {}): Promise<VersionPageDto> {
     await this.wait();
     this.findSkill(skillId);
-    const versions = this.versions.get(skillId) ?? [];
+    const items = this.versions.get(skillId) ?? [];
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
-    const start = (page - 1) * pageSize;
-    return { items: clone(versions.slice(start, start + pageSize)), total: versions.length, page, pageSize };
+    return { items: clone(items.slice((page - 1) * pageSize, page * pageSize)), total: items.length, page, pageSize };
   }
 
-  async listVersionFiles(skillId: string, versionId: string): Promise<SkillFileListResponseDto> {
+  async getSkillVersion(skillId: string, versionId: string): Promise<SkillVersionDetailDto> {
+    await this.wait();
+    const version = this.findVersion(skillId, versionId);
+    return { ...clone(version), skillMd: this.versionSkillMd.get(versionId) ?? "" };
+  }
+
+  async listVersionFiles(skillId: string, versionId: string): Promise<FileEntryDto[]> {
     await this.wait();
     this.findVersion(skillId, versionId);
     const source = this.versionFiles.get(versionId);
     if (!source) throw new SkillApiError("FILE_NOT_FOUND", "没有找到该版本的文件清单");
-    return { items: clone(source.files) };
+    return clone(source.files);
   }
 
-  async getVersionFileContent(
-    skillId: string,
-    versionId: string,
-    path: string,
-  ): Promise<SkillFileContentDto> {
+  async getVersionFileContent(skillId: string, versionId: string, path: string): Promise<SkillFileContentDto> {
     await this.wait();
     this.findVersion(skillId, versionId);
     const source = this.versionFiles.get(versionId);
     if (!source) throw new SkillApiError("FILE_NOT_FOUND", "没有找到该版本的文件清单");
-
-    if ("archive" in source) {
-      const result = await readArchiveText(source, path);
-      return { path, mediaType: result.mediaType, encoding: "UTF-8", size: result.size, content: result.content };
-    }
     const file = source.files.find((entry) => entry.path === path && entry.type === "FILE");
     if (!file) throw new SkillApiError("FILE_NOT_FOUND", "没有找到该版本中的文件", { path });
-    if (!file.previewable || !file.mediaType || source.contents[path] === undefined) {
-      throw new SkillApiError("FILE_PREVIEW_UNAVAILABLE", "该文件类型不支持文本预览", { path });
+    if (!file.previewable) throw new SkillApiError("FILE_PREVIEW_UNAVAILABLE", "该文件类型不支持文本预览", { path });
+    if ("archive" in source) {
+      const result = await readArchiveText(source, path);
+      return { path, content: result.content, sha256: file.sha256 ?? "", mediaType: result.mediaType, encoding: "UTF-8", size: result.size };
     }
     const content = source.contents[path];
-    return {
-      path,
-      mediaType: file.mediaType,
-      encoding: "UTF-8",
-      size: new TextEncoder().encode(content).byteLength,
-      content,
-    };
+    if (content === undefined) throw new SkillApiError("FILE_PREVIEW_UNAVAILABLE", "该文件类型不支持文本预览", { path });
+    return { path, content, sha256: file.sha256 ?? "", encoding: "UTF-8", size: new TextEncoder().encode(content).byteLength };
   }
 
   async createSkill(input: CreateSkillDto): Promise<SkillDetailDto> {
     await this.wait();
     const user = this.requireUser();
     console.info("[MockSkillApi] 开始校验新 Skill ZIP", { fileName: input.file.name });
-    const parsedPackage = await parseSkillPackage(input.file);
-    const inspectionData = parsedPackage.inspection;
-    if (!SEMVER_PATTERN.test(input.version)) {
-      throw new SkillApiError("INVALID_SEMVER", "版本号必须使用 SemVer，例如 1.0.0");
-    }
-    const duplicate = this.skills.find((skill) => skill.skillName === inspectionData.skillName);
-    if (duplicate) {
-      throw new SkillApiError("DUPLICATE_SKILL_NAME", "该 Skill 名称已经存在，请发布为新版本", { skillId: duplicate.id });
-    }
+    const parsed = await parseSkillPackage(input.file);
+    if (this.skills.some((skill) => skill.skillName === parsed.inspection.skillName)) throw new SkillApiError("DUPLICATE_SKILL_NAME", "该 Skill 名称已经存在，请发布为新版本");
+    this.checkDisplayName(input.displayName, input.confirmDuplicateDisplayName);
     const now = new Date().toISOString();
     const skillId = crypto.randomUUID();
+    const versionId = crypto.randomUUID();
     const version: SkillVersionDto = {
-      id: crypto.randomUUID(), version: input.version, skillName: inspectionData.skillName,
-      skillDescription: inspectionData.skillDescription, changelog: input.changelog ?? null,
-      packageSize: inspectionData.packageSize, packageSha256: inspectionData.packageSha256,
-      contentHash: inspectionData.contentHash, skillMd: inspectionData.skillMd, publishedAt: now, uploadedBy: user,
+      id: versionId, skillId, version: "1.0.0", status: "PUBLISHED", skillName: parsed.inspection.skillName,
+      skillDescription: parsed.inspection.skillDescription, changelog: "首次发布", baseVersionId: null,
+      packageSize: parsed.inspection.packageSize, packageSha256: parsed.inspection.packageSha256, contentHash: parsed.inspection.contentHash,
+      uploadedBy: user, publishedAt: now, withdrawnBy: null, withdrawnAt: null, withdrawalReason: null,
     };
+    const derivedSkill = input.forkedFromSkillId ? this.findSkill(input.forkedFromSkillId) : null;
+    const derivedVersion = derivedSkill && input.forkedFromVersionId ? this.findVersion(derivedSkill.id, input.forkedFromVersionId) : null;
     const skill: SkillDetailDto = {
-      id: skillId, skillName: inspectionData.skillName, displayName: input.displayName,
-      skillDescription: inspectionData.skillDescription, displayDescription: input.displayDescription,
-      tags: this.resolveTags(input.tags.tagIds, input.tags.newTagNames), latestVersion: version,
-      uploadedBy: user, updatedBy: user, installCount: 0, createdAt: now, updatedAt: now,
+      id: skillId, skillName: version.skillName, displayName: input.displayName, skillDescription: version.skillDescription,
+      displayDescription: input.displayDescription, status: "ACTIVE", owner: user, collaborators: [],
+      tags: this.resolveTags(input.tagIds, input.newTagNames), currentVersion: version, installCount: 0,
+      derivedFrom: derivedSkill && derivedVersion ? { skillId: derivedSkill.id, skillName: derivedSkill.skillName, versionId: derivedVersion.id, version: derivedVersion.version, status: derivedSkill.status, linkable: derivedSkill.status === "ACTIVE" } : null,
+      derivedChain: derivedSkill && derivedVersion ? [...derivedSkill.derivedChain, { skillId: derivedSkill.id, skillName: derivedSkill.skillName, versionId: derivedVersion.id, version: derivedVersion.version, status: derivedSkill.status, linkable: derivedSkill.status === "ACTIVE" }] : [],
+      updatedBy: user, archivedAt: null, archiveReason: null, nameConflictReason: null, createdAt: now, updatedAt: now,
     };
     this.skills.unshift(skill);
     this.versions.set(skillId, [version]);
-    this.versionFiles.set(version.id, parsedPackage.source);
-    console.info("[MockSkillApi] Skill 创建完成", { skillId, version: input.version });
+    this.versionFiles.set(versionId, parsed.source);
+    this.versionSkillMd.set(versionId, parsed.inspection.skillMd);
+    console.info("[MockSkillApi] Skill 创建完成", { skillId });
     return clone(skill);
   }
 
@@ -265,15 +252,16 @@ export class MockSkillApi implements SkillApi {
     await this.wait();
     const user = this.requireUser();
     const skill = this.findSkill(skillId);
-    if (skill.uploadedBy.id !== user.id) {
-      throw new SkillApiError("NOT_SKILL_OWNER", "只有原上传者可以修改展示信息和 Tag");
+    if (!this.canCollaborate(skill, user)) throw new SkillApiError("FORBIDDEN", "只有 Owner 或协作者可以修改展示信息");
+    if (input.displayName !== undefined && skill.owner.id !== user.id && user.role !== "ADMIN") throw new SkillApiError("OWNER_REQUIRED", "只有 Owner 可以修改展示名称");
+    if (input.displayName !== undefined) {
+      this.checkDisplayName(input.displayName, input.confirmDuplicateDisplayName, skillId);
+      skill.displayName = input.displayName;
     }
-    if (input.displayName !== undefined) skill.displayName = input.displayName;
     if (input.displayDescription !== undefined) skill.displayDescription = input.displayDescription;
-    if (input.tags !== undefined) skill.tags = this.resolveTags(input.tags.tagIds, input.tags.newTagNames);
+    if (input.tagIds !== undefined || input.newTagNames !== undefined) skill.tags = this.resolveTags(input.tagIds, input.newTagNames);
     skill.updatedBy = user;
     skill.updatedAt = new Date().toISOString();
-    console.info("[MockSkillApi] Skill 平台信息已更新", { skillId });
     return clone(skill);
   }
 
@@ -281,82 +269,149 @@ export class MockSkillApi implements SkillApi {
     await this.wait();
     const user = this.requireUser();
     const skill = this.findSkill(skillId);
-    console.info("[MockSkillApi] 开始校验新版本 ZIP", { skillId, fileName: input.file.name });
-    const parsedPackage = await parseSkillPackage(input.file);
-    const inspectionData = parsedPackage.inspection;
-    if (inspectionData.skillName !== skill.skillName) {
-      throw new SkillApiError("SKILL_NAME_MISMATCH", "ZIP 中的 Skill 名称与目标 Skill 不一致，建议发布为新的 Skill", { expectedSkillName: skill.skillName, actualSkillName: inspectionData.skillName });
-    }
-    if (!SEMVER_PATTERN.test(input.version)) {
-      throw new SkillApiError("INVALID_SEMVER", "版本号必须使用 SemVer，例如 1.2.0");
-    }
+    if (skill.status !== "ACTIVE") throw new SkillApiError("SKILL_UNAVAILABLE", "当前 Skill 状态不允许发布新版本");
+    const parsed = await parseSkillPackage(input.file);
+    if (parsed.inspection.skillName !== skill.skillName) throw new SkillApiError("SKILL_NAME_MISMATCH", "ZIP 中的 Skill 名称与目标 Skill 不一致，建议发布为新的 Skill", { expectedSkillName: skill.skillName, actualSkillName: parsed.inspection.skillName });
+    if (!SEMVER_PATTERN.test(input.version)) throw new SkillApiError("INVALID_SEMVER", "版本号必须使用 SemVer");
     const versions = this.versions.get(skillId) ?? [];
-    if (versions.some((version) => version.version === input.version)) {
-      throw new SkillApiError("VERSION_ALREADY_EXISTS", "该版本号已经存在");
-    }
-    if (compareSemVer(input.version, skill.latestVersion.version) <= 0) {
-      throw new SkillApiError("VERSION_NOT_GREATER", "新版本必须高于当前最新版本");
-    }
+    if (input.baseVersionId !== skill.currentVersion.id) throw new SkillApiError("VERSION_CONFLICT", "发布期间已经出现新版本，请刷新后重试", { currentVersion: skill.currentVersion.version });
+    if (versions.some((version) => version.version === input.version)) throw new SkillApiError("VERSION_ALREADY_EXISTS", "该版本号已经存在");
+    if (compareSemVer(input.version, skill.currentVersion.version) <= 0) throw new SkillApiError("VERSION_NOT_GREATER", "新版本必须高于当前版本");
+    if (versions.some((version) => version.contentHash === parsed.inspection.contentHash)) throw new SkillApiError("CONTENT_UNCHANGED", "ZIP 内容与历史版本一致，无需重复发布");
+    if (input.displayName !== undefined && skill.owner.id !== user.id && user.role !== "ADMIN") throw new SkillApiError("OWNER_REQUIRED", "只有 Owner 可以修改展示名称");
+    if (input.displayName !== undefined) this.checkDisplayName(input.displayName, input.confirmDuplicateDisplayName, skillId);
+    const now = new Date().toISOString();
     const version: SkillVersionDto = {
-      id: crypto.randomUUID(), version: input.version, skillName: inspectionData.skillName,
-      skillDescription: inspectionData.skillDescription, changelog: input.changelog,
-      packageSize: inspectionData.packageSize, packageSha256: inspectionData.packageSha256,
-      contentHash: inspectionData.contentHash, skillMd: inspectionData.skillMd,
-      publishedAt: new Date().toISOString(), uploadedBy: user,
+      id: crypto.randomUUID(), skillId, version: input.version, status: "PUBLISHED", skillName: parsed.inspection.skillName,
+      skillDescription: parsed.inspection.skillDescription, changelog: input.changelog, baseVersionId: input.baseVersionId,
+      packageSize: parsed.inspection.packageSize, packageSha256: parsed.inspection.packageSha256, contentHash: parsed.inspection.contentHash,
+      uploadedBy: user, publishedAt: now, withdrawnBy: null, withdrawnAt: null, withdrawalReason: null,
     };
     versions.unshift(version);
-    this.versions.set(skillId, versions);
-    this.versionFiles.set(version.id, parsedPackage.source);
+    if (skill.owner.id !== user.id && !skill.collaborators.some((item) => item.id === user.id)) skill.collaborators.push(user);
+    skill.currentVersion = version;
     skill.skillDescription = version.skillDescription;
-    skill.latestVersion = version;
+    if (input.displayName !== undefined) skill.displayName = input.displayName;
+    if (input.displayDescription !== undefined) skill.displayDescription = input.displayDescription;
+    if (input.tagIds !== undefined || input.newTagNames !== undefined) skill.tags = this.resolveTags(input.tagIds, input.newTagNames);
     skill.updatedBy = user;
-    skill.updatedAt = version.publishedAt;
-    console.info("[MockSkillApi] Skill 新版本已发布", { skillId, version: input.version });
+    skill.updatedAt = now;
+    this.versionFiles.set(version.id, parsed.source);
+    this.versionSkillMd.set(version.id, parsed.inspection.skillMd);
     return clone(skill);
   }
+
+  async withdrawSkillVersion(skillId: string, versionId: string, input: ReasonDto): Promise<SkillVersionDto> {
+    await this.wait();
+    const user = this.requireUser();
+    const skill = this.findSkill(skillId);
+    if (!this.canCollaborate(skill, user)) throw new SkillApiError("FORBIDDEN", "没有撤回版本的权限");
+    const version = this.findVersion(skillId, versionId);
+    if (version.version === "1.0.0") throw new SkillApiError("INITIAL_VERSION_REQUIRED", "首个 1.0.0 版本不能撤回");
+    version.status = "WITHDRAWN";
+    version.withdrawnBy = user;
+    version.withdrawnAt = new Date().toISOString();
+    version.withdrawalReason = input.reason;
+    return clone(version);
+  }
+
+  async archiveSkill(skillId: string, input: ReasonDto): Promise<SkillDetailDto> {
+    await this.wait();
+    const user = this.requireUser();
+    const skill = this.findSkill(skillId);
+    if (skill.owner.id !== user.id && user.role !== "ADMIN") throw new SkillApiError("OWNER_REQUIRED", "只有 Owner 或管理员可以归档 Skill");
+    skill.status = "ARCHIVED";
+    skill.archivedAt = new Date().toISOString();
+    skill.archiveReason = input.reason;
+    return clone(skill);
+  }
+
+  async restoreSkill(skillId: string): Promise<SkillDetailDto> {
+    await this.wait();
+    const user = this.requireUser();
+    const skill = this.findSkill(skillId);
+    if (skill.owner.id !== user.id && user.role !== "ADMIN") throw new SkillApiError("OWNER_REQUIRED", "只有 Owner 或管理员可以恢复 Skill");
+    skill.status = "ACTIVE";
+    skill.archivedAt = null;
+    skill.archiveReason = null;
+    return clone(skill);
+  }
+
+  async getInstallationStatus(skillId: string): Promise<InstallationStatusDto> {
+    await this.wait();
+    const skill = this.findSkill(skillId);
+    return { skillId, status: skill.status, archivedAt: skill.archivedAt, archiveReason: skill.archiveReason };
+  }
+
+  async createOwnershipTransfer(skillId: string, input: CreateOwnershipTransferDto): Promise<OwnershipTransferDto> {
+    await this.wait();
+    const user = this.requireUser();
+    const skill = this.findSkill(skillId);
+    if (skill.owner.id !== user.id && user.role !== "ADMIN") throw new SkillApiError("OWNER_REQUIRED", "只有 Owner 或管理员可以转移所有权");
+    const target = skill.collaborators.find((item) => item.id === input.targetUserId);
+    if (!target) throw new SkillApiError("COLLABORATOR_REQUIRED", "所有权只能转移给现有协作者");
+    const transfer: OwnershipTransferDto = { id: crypto.randomUUID(), skillId, fromOwner: skill.owner, targetUser: target, status: "PENDING", reason: input.reason ?? null, createdBy: user, createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 7 * 86_400_000).toISOString(), resolvedAt: null };
+    this.transfers.push(transfer);
+    return clone(transfer);
+  }
+
+  private resolveTransfer(transferId: string, status: "ACCEPTED" | "REJECTED" | "CANCELED"): OwnershipTransferDto {
+    const transfer = this.transfers.find((item) => item.id === transferId);
+    if (!transfer) throw new SkillApiError("TRANSFER_NOT_FOUND", "没有找到所有权转移邀请");
+    if (transfer.status !== "PENDING") throw new SkillApiError("TRANSFER_RESOLVED", "该邀请已经处理");
+    transfer.status = status;
+    transfer.resolvedAt = new Date().toISOString();
+    if (status === "ACCEPTED") {
+      const skill = this.findSkill(transfer.skillId);
+      skill.collaborators = [...skill.collaborators.filter((item) => item.id !== transfer.targetUser.id), transfer.fromOwner];
+      skill.owner = transfer.targetUser;
+    }
+    return transfer;
+  }
+
+  async acceptOwnershipTransfer(transferId: string): Promise<OwnershipTransferDto> { await this.wait(); this.requireUser(); return clone(this.resolveTransfer(transferId, "ACCEPTED")); }
+  async rejectOwnershipTransfer(transferId: string): Promise<OwnershipTransferDto> { await this.wait(); this.requireUser(); return clone(this.resolveTransfer(transferId, "REJECTED")); }
+  async cancelOwnershipTransfer(transferId: string): Promise<OwnershipTransferDto> { await this.wait(); this.requireUser(); return clone(this.resolveTransfer(transferId, "CANCELED")); }
 
   async getDownloadTicket(skillId: string, versionId: string): Promise<DownloadTicketDto> {
     await this.wait();
     this.requireUser();
-    this.findSkill(skillId);
-    const version = (this.versions.get(skillId) ?? []).find((item) => item.id === versionId);
-    if (!version) throw new SkillApiError("VERSION_NOT_FOUND", "没有找到该 Skill 版本");
-    return {
-      url: `https://mock.kocotree.local/skills/${skillId}/${versionId}.zip`,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-      packageSize: version.packageSize, packageSha256: version.packageSha256, contentHash: version.contentHash,
-    };
+    const skill = this.findSkill(skillId);
+    const version = this.findVersion(skillId, versionId);
+    if (skill.status !== "ACTIVE" || version.status !== "PUBLISHED") throw new SkillApiError("INSTALLATION_UNAVAILABLE", "当前版本不可安装");
+    return { url: `https://mock.kocotree.local/skills/${skillId}/${versionId}.zip`, expiresAt: new Date(Date.now() + 300_000).toISOString(), packageSha256: version.packageSha256, contentHash: version.contentHash };
   }
 
-  async recordInstallation(skillId: string, versionId: string, event: InstallationEventDto): Promise<InstallationEventResponseDto> {
+  async resolveInstallation(input: { skillName: string; contentHash: string }): Promise<InstallationResolutionDto> {
+    await this.wait();
+    const skill = this.skills.find((item) => item.skillName === input.skillName);
+    const version = skill ? (this.versions.get(skill.id) ?? []).find((item) => item.contentHash === input.contentHash) : null;
+    return { matched: Boolean(skill && version), skillId: skill?.id ?? null, versionId: version?.id ?? null, status: skill?.status ?? null, archivedAt: skill?.archivedAt ?? null, archiveReason: skill?.archiveReason ?? null };
+  }
+
+  async recordInstallation(event: InstallationEventDto): Promise<void> {
     await this.wait();
     this.requireUser();
-    const skill = this.findSkill(skillId);
-    const versionExists = (this.versions.get(skillId) ?? []).some((item) => item.id === versionId);
-    if (!versionExists) throw new SkillApiError("VERSION_NOT_FOUND", "没有找到该 Skill 版本");
-    const recorded = !this.installationEvents.has(event.eventId);
-    if (recorded) {
+    const skill = this.findSkill(event.skillId);
+    this.findVersion(event.skillId, event.versionId);
+    if (!this.installationEvents.has(event.eventId)) {
       this.installationEvents.add(event.eventId);
       skill.installCount += 1;
     }
-    return { recorded, installCount: skill.installCount };
   }
 
-  async getCurrentUser(): Promise<UserDto | null> {
+  async listNotifications(query: ListNotificationsQuery = {}): Promise<NotificationPageDto> {
     await this.wait();
-    return clone(this.currentUser);
+    this.requireUser();
+    const items = this.notifications.filter((item) => !query.unreadOnly || item.readAt === null);
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    return { items: clone(items.slice((page - 1) * pageSize, page * pageSize)), total: items.length, unreadCount: this.notifications.filter((item) => item.readAt === null).length, page, pageSize };
   }
 
-  async signIn(): Promise<UserDto> {
-    await this.wait();
-    this.currentUser = clone(mockUsers.current);
-    console.info("[MockSkillApi] 模拟飞书登录完成", { userId: this.currentUser.id });
-    return clone(this.currentUser);
-  }
-
-  async signOut(): Promise<void> {
-    await this.wait();
-    console.info("[MockSkillApi] 模拟用户退出登录");
-    this.currentUser = null;
-  }
+  async readNotification(notificationId: string): Promise<void> { await this.wait(); this.requireUser(); const item = this.notifications.find((notification) => notification.id === notificationId); if (item) item.readAt = new Date().toISOString(); }
+  async readAllNotifications(): Promise<void> { await this.wait(); this.requireUser(); const now = new Date().toISOString(); this.notifications.forEach((item) => { if (!item.readAt) item.readAt = now; }); }
+  async getCurrentUser(): Promise<UserDto | null> { await this.wait(); return clone(this.currentUser); }
+  async signIn(): Promise<UserDto> { await this.wait(); this.currentUser = clone(mockUsers.current); console.info("[MockSkillApi] 模拟飞书登录完成", { userId: this.currentUser.id }); return clone(this.currentUser); }
+  async signOut(): Promise<void> { await this.wait(); this.currentUser = null; console.info("[MockSkillApi] 模拟用户退出登录"); }
 }
