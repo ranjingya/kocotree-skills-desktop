@@ -82,6 +82,12 @@ function SkillCard({
           <span className="skill-card-copy">
             <strong className="skill-display-name" title={skill.displayName}>{skill.displayName}</strong>
             <code className="skill-internal-name" title={skill.skillName}>{skill.skillName}</code>
+            {skill.tags.length > 0 && (
+              <span className="skill-card-tags" aria-label={`标签：${skill.tags.map((tag) => tag.name).join("、")}`}>
+                {skill.tags.slice(0, 2).map((tag) => <span key={tag.id}>{tag.name}</span>)}
+                {skill.tags.length > 2 && <span className="skill-card-tag-count">+{skill.tags.length - 2}</span>}
+              </span>
+            )}
             <span className="skill-description">{skill.displayDescription}</span>
           </span>
         </button>
