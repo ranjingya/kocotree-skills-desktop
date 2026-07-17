@@ -187,6 +187,7 @@ export function SkillDetailModal({
 
   const selectedFile = fileEntries.find((entry) => entry.path === selectedFilePath) ?? null;
   const orderedFileEntries = orderFileEntries(fileEntries);
+  const sortedCollaborators = [...(detail?.collaborators ?? [])].sort((left, right) => left.name.localeCompare(right.name, "zh-CN"));
 
   return (
     <Modal
@@ -211,6 +212,7 @@ export function SkillDetailModal({
               <Button
                 theme="solid"
                 type="primary"
+                disabled={detail.status !== "ACTIVE" || detail.currentVersion.status !== "PUBLISHED"}
                 icon={installedSkillIds.has(detail.id) ? undefined : <AppIcon name="download" size={16} />}
                 onClick={() => onInstall(detail, detail.currentVersion)}
               >
@@ -233,6 +235,9 @@ export function SkillDetailModal({
               <strong>{detail.displayName}</strong>
               <code>{detail.skillName}</code>
             </div>
+            <span className={`detail-status detail-status-${detail.status.toLocaleLowerCase()}`}>
+              {detail.status === "ACTIVE" ? "使用中" : detail.status === "ARCHIVED" ? "已归档" : "名称冲突"}
+            </span>
           </div>
           <p className="detail-description">{detail.displayDescription}</p>
           <div className="detail-tags">
@@ -243,6 +248,37 @@ export function SkillDetailModal({
             <div><span>安装次数</span><strong>{detail.installCount.toLocaleString("zh-CN")}</strong></div>
             <div><span>当前 Owner</span><strong>{detail.owner.name}</strong></div>
           </div>
+
+          <div className="detail-people">
+            <div>
+              <span>Owner</span>
+              <strong><span className="collaborator-avatar">{detail.owner.name.slice(0, 1)}</span>{detail.owner.name}</strong>
+            </div>
+            <div>
+              <span>协作者 {sortedCollaborators.length}</span>
+              <div className="collaborator-list">
+                {sortedCollaborators.slice(0, 8).map((user) => (
+                  <span
+                    className={user.status === "DISABLED" ? "collaborator-avatar disabled" : "collaborator-avatar"}
+                    key={user.id}
+                    title={`${user.name} · ${user.departmentPath.join(" / ") || "部门信息暂无"}${user.status === "DISABLED" ? " · 账号已停用" : ""}`}
+                  >
+                    {user.name.slice(0, 1)}
+                  </span>
+                ))}
+                {sortedCollaborators.length > 8 && <span className="collaborator-more">+{sortedCollaborators.length - 8}</span>}
+                {sortedCollaborators.length === 0 && <small>暂无协作者</small>}
+              </div>
+            </div>
+          </div>
+
+          {detail.derivedFrom && (
+            <div className="derived-source">
+              <span>派生自</span>
+              <strong>{detail.derivedFrom.skillName} · v{detail.derivedFrom.version}</strong>
+              {!detail.derivedFrom.linkable && <small>来源已归档，无法跳转</small>}
+            </div>
+          )}
 
           <Tabs type="line">
             <TabPane tab="介绍" itemKey="overview">
@@ -259,14 +295,19 @@ export function SkillDetailModal({
             </TabPane>
             <TabPane tab={`版本历史 ${versions.length}`} itemKey="versions">
               <div className="version-list">
-                {versions.map((version, index) => (
+                {versions.map((version) => (
                   <article className="version-item" key={version.id}>
                     <div className="version-main">
-                      <div><strong>v{version.version}</strong>{index === 0 && <Tag size="small" color="green">最新</Tag>}</div>
-                      <p>{version.changelog ?? "首次发布"}</p>
+                      <div>
+                        <strong>v{version.version}</strong>
+                        {version.id === detail.currentVersion.id && <Tag size="small" color="green">当前</Tag>}
+                        {version.status === "WITHDRAWN" && <Tag size="small" color="red">已撤回</Tag>}
+                      </div>
+                      <p>{version.changelog}</p>
                       <span>{version.uploadedBy.name} · {formatDate(version.publishedAt)} · {formatFileSize(version.packageSize)}</span>
+                      {version.status === "WITHDRAWN" && <span className="withdrawal-reason">撤回原因：{version.withdrawalReason}</span>}
                     </div>
-                    <Button size="small" onClick={() => onInstall(detail, version)}>安装</Button>
+                    <Button size="small" disabled={version.status === "WITHDRAWN" || detail.status !== "ACTIVE"} onClick={() => onInstall(detail, version)}>安装</Button>
                   </article>
                 ))}
               </div>

@@ -1,6 +1,8 @@
 export type AppIconName =
   | "browse"
   | "upload"
+  | "library"
+  | "bell"
   | "search"
   | "clock"
   | "trend"
@@ -14,6 +16,8 @@ export type AppIconName =
 const iconPaths: Record<AppIconName, React.ReactNode> = {
   browse: <><path d="M4 5.5h5v5H4zM15 5.5h5v5h-5zM4 15.5h5v5H4zM15 15.5h5v5h-5z" /></>,
   upload: <><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5" /><path d="M5 14v5h14v-5" /></>,
+  library: <><path d="M5 4h14v4H5zM5 10h14v4H5zM5 16h14v4H5z" /></>,
+  bell: <><path d="M6.5 10a5.5 5.5 0 0 1 11 0c0 5 2 5.5 2 5.5h-15s2-.5 2-5.5Z" /><path d="M10 19h4" /></>,
   search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 4 4" /></>,
   clock: <><circle cx="12" cy="12" r="8" /><path d="M12 7.5V12l3 2" /></>,
   trend: <><path d="m4 16 5-5 3.5 3.5L20 7" /><path d="M15 7h5v5" /></>,

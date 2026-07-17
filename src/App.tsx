@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Dropdown, Modal, Toast } from "@douyinfe/semi-ui";
 import { IconExit } from "@douyinfe/semi-icons";
 import {
   skillApi,
+  localSkillService,
   SkillApiError,
   type SkillSummaryDto,
   type SkillVersionDto,
@@ -12,9 +13,11 @@ import {
 import { AppIcon } from "./components/AppIcon";
 import { SkillDetailModal } from "./components/SkillDetailModal";
 import { UploadPage } from "./components/UploadPage";
+import { MySkillsPage } from "./components/MySkillsPage";
+import { NotificationPanel } from "./components/NotificationPanel";
 import "./App.css";
 
-type PageKey = "browse" | "upload";
+type PageKey = "browse" | "my-skills" | "upload";
 type SortKey = "created" | "updated" | "popular";
 
 const logoTones = ["dark", "blue", "orange", "violet", "green"] as const;
@@ -244,6 +247,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
   const [loginVisible, setLoginVisible] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const sidebarUserAreaRef = useRef<HTMLDivElement>(null);
   const protectedActionRef = useRef<(() => void) | null>(null);
   const [installedSkillIds, setInstalledSkillIds] = useState(
@@ -255,6 +259,23 @@ function App() {
       console.error("[KocotreeSkills] 当前用户状态加载失败", reason);
     });
   }, []);
+
+  useEffect(() => {
+    localSkillService.scanSkills().then((items) => {
+      setInstalledSkillIds(new Set(items.flatMap((item) => item.skillId ? [item.skillId] : [])));
+    }).catch((reason: unknown) => {
+      console.error("[KocotreeSkills] 本地安装状态加载失败", reason);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    skillApi.listNotifications({ pageSize: 1 }).then((result) => {
+      setUnreadCount(result.unreadCount);
+    }).catch((reason: unknown) => {
+      console.error("[KocotreeSkills] 未读通知数量加载失败", reason);
+    });
+  }, [currentUser]);
 
   useEffect(() => {
     const userArea = sidebarUserAreaRef.current;
@@ -310,6 +331,7 @@ function App() {
     try {
       await skillApi.signOut();
       setCurrentUser(null);
+      setUnreadCount(0);
       setActivePage("browse");
       Toast.success("已退出登录");
     } catch (reason) {
@@ -349,12 +371,16 @@ function App() {
     Toast.info(`正在准备 ${skill.displayName} v${version}`);
     try {
       const ticket = await skillApi.getDownloadTicket(skill.id, versionId);
+      const detail = await skillApi.getSkill(skill.id);
+      const versionDetail = (await skillApi.listSkillVersions(skill.id)).items.find((item) => item.id === versionId);
+      if (!versionDetail) throw new SkillApiError("VERSION_NOT_FOUND", "没有找到该 Skill 版本");
       console.info("[KocotreeSkills] 已获取模拟下载凭证", {
         skillId: skill.id,
         versionId,
         packageSha256: ticket.packageSha256,
         target: "~/.agents/skills",
       });
+      await localSkillService.install({ skill: detail, version: versionDetail });
       await skillApi.recordInstallation({
         eventId: crypto.randomUUID(),
         skillId: skill.id,
@@ -393,6 +419,20 @@ function App() {
     Toast.success(`${skill.displayName} v${skill.currentVersion.version} 发布成功`);
   }
 
+  const handleUnreadChange = useCallback((count: number) => {
+    setUnreadCount(count);
+  }, []);
+
+  const handleOpenNotificationSkill = useCallback((skillId: string) => {
+    skillApi.getSkill(skillId).then((skill) => {
+      setActivePage("browse");
+      setSelectedSkill(skill);
+    }).catch((reason: unknown) => {
+      console.error("[KocotreeSkills] 通知关联 Skill 加载失败", reason);
+      Toast.error("关联的 Skill 当前不可查看");
+    });
+  }, []);
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -402,6 +442,14 @@ function App() {
         </div>
 
         <nav className="sidebar-nav" aria-label="主导航">
+          <button
+            className={activePage === "my-skills" ? "active" : ""}
+            type="button"
+            onClick={() => setActivePage("my-skills")}
+          >
+            <AppIcon name="library" size={20} />
+            <span>我的 Skill</span>
+          </button>
           <button
             className={activePage === "browse" ? "active" : ""}
             type="button"
@@ -436,6 +484,7 @@ function App() {
                       <small>{currentUser.departmentPath.join(" · ") || "部门信息暂无"}</small>
                     </span>
                   </div>
+                  <NotificationPanel onUnreadChange={handleUnreadChange} onOpenSkill={handleOpenNotificationSkill} />
                   <Dropdown.Menu>
                     <Dropdown.Item type="danger" icon={<IconExit aria-hidden="true" />} onClick={() => void handleSignOut()}>
                       退出登录
@@ -450,6 +499,7 @@ function App() {
                   <strong>{currentUser.name}</strong>
                   <small>{currentUser.departmentPath?.join(" ") || "部门信息暂无"}</small>
                 </span>
+                {unreadCount > 0 && <span className="account-unread-dot" aria-label={`${unreadCount} 条未读通知`} />}
               </button>
             </Dropdown>
           ) : (
@@ -468,6 +518,12 @@ function App() {
             onInstall={handleInstall}
             onOpen={handleOpenSkill}
             refreshKey={browseRefreshKey}
+          />
+        ) : activePage === "my-skills" ? (
+          <MySkillsPage
+            currentUser={currentUser}
+            onLogin={() => setLoginVisible(true)}
+            onOpenSkill={handleOpenSkill}
           />
         ) : (
           <UploadPage
