@@ -166,36 +166,45 @@ export function MySkillsPage({
             const { record } = item;
             const presentation = getOnlinePresentation(item);
             return (
-              <article className="my-skill-row" key={record.id}>
-                <span className="skill-logo skill-logo-green">{record.skillName.slice(0, 2).toUpperCase()}</span>
-                <div className="my-skill-main">
-                  <strong>{record.displayName}</strong>
-                  <code>{record.skillName}</code>
-                  <small>{record.installPath}</small>
-                  {presentation.note && <small className="my-skill-warning">{presentation.note}</small>}
+              <article className="my-skill-card" key={record.id}>
+                <div className="my-skill-card-heading">
+                  <span className="skill-logo skill-logo-green">{record.skillName.slice(0, 2).toUpperCase()}</span>
+                  <div className="my-skill-main">
+                    <strong>{record.displayName}</strong>
+                    <code>{record.skillName}</code>
+                    <small>{record.installPath}</small>
+                  </div>
                 </div>
-                <div className="my-skill-statuses">
-                  <span className={`local-status local-status-${record.status.toLocaleLowerCase()}`}>{localStatusLabels[record.status]}</span>
-                  {presentation.badges.map((badge) => (
-                    <span className={`online-status online-status-${badge.tone}`} key={badge.key}>{badge.label}</span>
-                  ))}
+                {presentation.note && <p className="my-skill-warning">{presentation.note}</p>}
+                <div className="my-skill-card-footer">
+                  <div className="my-skill-statuses">
+                    <span className={`local-status local-status-${record.status.toLocaleLowerCase()}`}>{localStatusLabels[record.status]}</span>
+                    {presentation.badges.map((badge) => (
+                      <span className={`online-status online-status-${badge.tone}`} key={badge.key}>{badge.label}</span>
+                    ))}
+                  </div>
+                  <span className="my-skill-version">{record.version ? `v${record.version}` : "未关联版本"}</span>
                 </div>
-                <span className="my-skill-version">{record.version ? `v${record.version}` : "未关联版本"}</span>
               </article>
             );
           })}
+          {localSkills.length === 0 && <div className="empty-state my-skills-empty"><strong>这里还没有本地 Skill</strong><span>从技能广场安装后会显示在这里</span></div>}
         </section>
       ) : (
         <section className="my-skills-list">
           {onlineSkills.map((skill) => (
-            <button className="my-skill-row online" type="button" key={skill.id} onClick={() => onOpenSkill(skill)}>
-              <span className="skill-logo skill-logo-blue">{skill.skillName.slice(0, 2).toUpperCase()}</span>
-              <span className="my-skill-main"><strong>{skill.displayName}</strong><code>{skill.skillName}</code><small>{skill.displayDescription}</small></span>
-              <span className={`skill-status skill-status-${skill.status.toLocaleLowerCase()}`}>{skill.status === "ACTIVE" ? "使用中" : skill.status === "ARCHIVED" ? "已归档" : "名称冲突"}</span>
-              <span className="my-skill-version">v{skill.currentVersion.version}</span>
+            <button className="my-skill-card online" type="button" key={skill.id} onClick={() => onOpenSkill(skill)}>
+              <span className="my-skill-card-heading">
+                <span className="skill-logo skill-logo-blue">{skill.skillName.slice(0, 2).toUpperCase()}</span>
+                <span className="my-skill-main"><strong>{skill.displayName}</strong><code>{skill.skillName}</code><small>{skill.displayDescription}</small></span>
+              </span>
+              <span className="my-skill-card-footer">
+                <span className={`skill-status skill-status-${skill.status.toLocaleLowerCase()}`}>{skill.status === "ACTIVE" ? "使用中" : skill.status === "ARCHIVED" ? "已归档" : "名称冲突"}</span>
+                <span className="my-skill-version">v{skill.currentVersion.version}</span>
+              </span>
             </button>
           ))}
-          {onlineSkills.length === 0 && <div className="empty-state"><strong>这里还没有 Skill</strong><span>切换其他分类看看</span></div>}
+          {onlineSkills.length === 0 && <div className="empty-state my-skills-empty"><strong>这里还没有 Skill</strong><span>切换其他分类看看</span></div>}
         </section>
       )}
     </main>
