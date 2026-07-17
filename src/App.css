@@ -1278,7 +1278,7 @@ textarea:focus-visible,
 
 .detail-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 1.3fr);
   border: 1px solid var(--border);
   border-radius: 9px;
   background: #fafbfb;
@@ -1294,41 +1294,80 @@ textarea:focus-visible,
   border-left: 1px solid var(--border);
 }
 
-.detail-stats span,
+.detail-stats > div > span,
 .detail-metadata dt {
   color: #8a8e97;
   font-size: 12px;
 }
 
-.detail-stats strong {
+.detail-stats > div > strong {
   font-size: 14px;
 }
 
-.detail-people {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-  padding: 10px 13px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
+.detail-maintainers {
+  min-width: 0;
 }
 
-.detail-people > div {
-  display: grid;
-  gap: 7px;
-}
-
-.detail-people > div > span {
-  color: #8a8e97;
-  font-size: 11px;
-}
-
-.detail-people strong,
+.maintainer-list,
 .collaborator-list {
   display: flex;
   min-height: 26px;
   align-items: center;
+}
+
+.maintainer-list {
+  min-width: 0;
   gap: 7px;
+}
+
+.owner-avatar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  place-items: center;
+  border: 2px solid var(--accent-soft);
+  border-radius: 50%;
+  background: var(--accent-deep);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.owner-avatar.disabled {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.owner-name {
+  overflow: hidden;
+  max-width: 72px;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owner-role {
+  flex: none;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.maintainer-divider {
+  width: 1px;
+  height: 22px;
+  flex: none;
+  margin: 0 2px;
+  background: var(--border);
+}
+
+.collaborator-list {
+  min-width: 0;
 }
 
 .collaborator-avatar,
@@ -1347,7 +1386,7 @@ textarea:focus-visible,
 }
 
 .collaborator-list .collaborator-avatar + .collaborator-avatar {
-  margin-left: -10px;
+  margin-left: -8px;
 }
 
 .collaborator-avatar.disabled {
@@ -1358,6 +1397,7 @@ textarea:focus-visible,
 .collaborator-more {
   width: auto;
   min-width: 26px;
+  margin-left: 4px;
   padding: 0 5px;
   background: #e9ebed;
   color: #666b75;

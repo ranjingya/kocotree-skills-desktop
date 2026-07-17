@@ -330,24 +330,35 @@ export function SkillDetailModal({
           <div className="detail-stats">
             <div><span>最新版本</span><strong>v{detail.currentVersion.version}</strong></div>
             <div><span>安装次数</span><strong>{detail.installCount.toLocaleString("zh-CN")}</strong></div>
-            <div><span>当前 Owner</span><strong>{detail.owner.name}</strong></div>
-          </div>
-
-          <div className="detail-people">
-            <div>
-              <span>协作者 {sortedCollaborators.length}</span>
-              <div className="collaborator-list">
-                {sortedCollaborators.slice(0, 8).map((user) => (
-                  <span
-                    className={user.status === "DISABLED" ? "collaborator-avatar disabled" : "collaborator-avatar"}
-                    key={user.id}
-                    title={`${user.name} · ${user.departmentPath.join(" / ") || "部门信息暂无"}${user.status === "DISABLED" ? " · 账号已停用" : ""}`}
-                  >
-                    {user.name.slice(0, 1)}
-                  </span>
-                ))}
-                {sortedCollaborators.length > 8 && <span className="collaborator-more">+{sortedCollaborators.length - 8}</span>}
-                {sortedCollaborators.length === 0 && <small>暂无协作者</small>}
+            <div className="detail-maintainers">
+              <span>维护成员</span>
+              <div className="maintainer-list">
+                <span
+                  className={detail.owner.status === "DISABLED" ? "owner-avatar disabled" : "owner-avatar"}
+                  title={`${detail.owner.name} · ${detail.owner.departmentPath.join(" / ") || "部门信息暂无"}${detail.owner.status === "DISABLED" ? " · 账号已停用" : ""}`}
+                >
+                  {detail.owner.name.slice(0, 1)}
+                </span>
+                <strong className="owner-name">{detail.owner.name}</strong>
+                <span className="owner-role">Owner</span>
+                {sortedCollaborators.length > 0 && <span className="maintainer-divider" aria-hidden="true" />}
+                <div className="collaborator-list" aria-label={`协作者 ${sortedCollaborators.length} 人`}>
+                  {sortedCollaborators.slice(0, 5).map((user) => (
+                    <span
+                      className={user.status === "DISABLED" ? "collaborator-avatar disabled" : "collaborator-avatar"}
+                      key={user.id}
+                      title={`${user.name} · ${user.departmentPath.join(" / ") || "部门信息暂无"}${user.status === "DISABLED" ? " · 账号已停用" : ""}`}
+                    >
+                      {user.name.slice(0, 1)}
+                    </span>
+                  ))}
+                  {sortedCollaborators.length > 5 && (
+                    <span className="collaborator-more" title={`另外 ${sortedCollaborators.length - 5} 位协作者`}>
+                      +{sortedCollaborators.length - 5}
+                    </span>
+                  )}
+                  {sortedCollaborators.length === 0 && <small>暂无协作者</small>}
+                </div>
               </div>
             </div>
           </div>
