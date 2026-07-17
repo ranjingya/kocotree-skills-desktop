@@ -451,7 +451,7 @@ textarea:focus-visible,
   flex: none;
   align-items: center;
   padding: 3px;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: 10px;
 }
 
