@@ -1184,6 +1184,7 @@ textarea:focus-visible,
   min-height: 0;
   flex: 1;
   overflow: hidden;
+  padding: 0 10px;
 }
 
 .detail-identity {
@@ -1346,12 +1347,6 @@ textarea:focus-visible,
 
 .detail-section h3 {
   margin: 0 0 8px;
-  color: #5f655f;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.detail-body .ui-tabs-list > button {
   font-size: 14px;
 }
 
