@@ -2,600 +2,567 @@
 
 ## 1. 文档状态
 
-本文档定义 Kocotree Skills 客户端依赖的首版 HTTP 契约。当前项目只实现模拟接口；真实后端、真实飞书认证和对象存储不在本阶段范围内。
+本文档定义 Kocotree Skills 前端、模拟接口和未来真实后端共同遵守的 HTTP 契约。权威机器可读定义为 [`openapi.yaml`](./openapi.yaml)。接口路径直接使用 `/api/...`，不增加 `/v1` 中间层。
 
-机器可读契约见 [`openapi.yaml`](./openapi.yaml)。两者不一致时，以 OpenAPI 为准。旧版后端文档仅作为设备授权、Bearer Token、分页和基础字段的参考，不代表本契约已经实现。
+ZIP 本地解析、本地安装、目录哈希扫描、备份和 Claude 链接属于客户端能力，不通过服务端 Skill DTO 表达。
 
 ## 2. 公共约定
 
-| 项目 | 约定 |
-| --- | --- |
-| 基础路径 | `/api` |
-| JSON 字段 | 英文 `camelCase` |
-| 时间 | ISO 8601 UTC，例如 `2026-07-15T09:30:00.000Z` |
-| 标识符 | 平台实体使用 UUID |
-| 版本号 | SemVer，例如 `1.2.0` |
-| 哈希 | `sha256:` 加 64 位小写十六进制 |
-| 鉴权 | `Authorization: Bearer <token>` |
-| 分页 | 页码从 1 开始，默认每页 20 条，最大 50 条 |
+- JSON 使用 UTF-8。
+- 时间使用带时区的 ISO 8601 字符串。
+- 标识符是服务端生成的不透明字符串。
+- 认证使用 `Authorization: Bearer <token>`。
+- 列表使用 `page`、`pageSize`，响应返回 `items`、`page`、`pageSize`、`total`。
+- 错误统一返回 `ErrorResponse`。
+- ZIP 发布使用 `multipart/form-data`。
+- 新建和发布版本由服务端重新解析 ZIP 并计算权威哈希。
+- 平台展示信息采用后提交覆盖前提交；版本发布使用 `baseVersionId` 检查并发。
 
-成功响应直接返回业务对象。错误响应统一为：
+统一错误：
 
 ```json
 {
-  "error": "INVALID_SKILL_PACKAGE",
-  "message": "ZIP 中没有找到 SKILL.md",
-  "details": {
-    "field": "file"
-  },
-  "requestId": "req_01J..."
+  "error": {
+    "code": "VERSION_CONFLICT",
+    "message": "目标 Skill 已发布更新，请刷新后重试。",
+    "details": {
+      "expectedVersionId": "ver_142",
+      "currentVersionId": "ver_143"
+    }
+  }
 }
 ```
 
-`details` 和 `requestId` 可以缺省。客户端根据 `error` 决定交互，根据 `message` 向用户解释原因，不应解析英文或中文消息文本来判断分支。
+## 3. 鉴权与权限
 
-## 3. 鉴权矩阵
+| 能力 | 匿名 | 登录用户 | 协作者 | Owner | 管理员 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 浏览公开 Skill、版本、Tag、文件树 | 是 | 是 | 是 | 是 | 是 |
+| 安装与安装上报 | 否 | 是 | 是 | 是 | 是 |
+| 创建 Skill | 否 | 是 | 是 | 是 | 是 |
+| 发布 ACTIVE Skill 新版本 | 否 | 是 | 是 | 是 | 是 |
+| 发布 ARCHIVED Skill 新版本 | 否 | 否 | 是 | 是 | 是 |
+| 修改展示简介、Tags | 否 | 否 | 是 | 是 | 是 |
+| 修改展示名称 | 否 | 否 | 否 | 是 | 否 |
+| 撤回自己的非首版版本 | 否 | 是 | 是 | 是 | 是 |
+| 撤回任意非首版版本 | 否 | 否 | 否 | 是 | 是 |
+| 归档、恢复 Skill | 否 | 否 | 否 | 是 | 是 |
+| 正常发起所有权转移 | 否 | 否 | 否 | 是 | 否 |
+| 处理停用 Owner | 否 | 否 | 否 | 否 | 是 |
 
-| 接口 | 匿名可用 |
-| --- | --- |
-| 获取 Skill 列表、详情、版本历史、版本文件树与文本预览 | 是 |
-| 获取 Tag 列表 | 是 |
-| 发起或轮询设备授权 | 是 |
-| 获取当前用户 | 否 |
-| 创建 Skill、发布版本 | 否 |
-| 修改 Skill 平台信息和 Tag | 否，仅原上传者可操作 |
-| 获取下载地址、上报安装成功 | 否 |
+管理员不能在有效 Owner 存在时强制转移所有权，也不能直接修改该 Skill 的展示名称。
 
-匿名用户触发受保护动作时，客户端先完成设备授权，再重放原动作。
-
-ZIP 预解析是客户端本地能力，不属于 HTTP 鉴权矩阵。当前产品仍在进入上传页面前触发登录。
-
-## 4. 核心字段
+## 4. 核心 DTO
 
 ### 4.1 User
 
-| 字段 | 类型 | 必返 | 说明 |
-| --- | --- | --- | --- |
-| `id` | `string` | 是 | 平台用户 UUID。 |
-| `name` | `string` | 是 | 飞书展示名。 |
-| `email` | `string \| null` | 是 | 飞书未返回时为 `null`。 |
-| `avatarUrl` | `string \| null` | 是 | 用户头像地址。 |
-| `departmentPath` | `string[]` | 是 | 从上级部门到直接所属部门的名称路径，无法获取时为空数组。 |
-| `status` | `ACTIVE \| DISABLED` | 是 | 用户状态。 |
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | ---: | --- |
+| `id` | `string` | 是 | 平台用户标识。 |
+| `name` | `string` | 是 | 飞书姓名，只读。 |
+| `avatarUrl` | `string \| null` | 是 | 飞书头像。 |
+| `departmentPath` | `string[]` | 是 | 飞书部门层级路径。 |
+| `status` | `ACTIVE \| DISABLED` | 是 | 飞书账号状态。 |
+| `role` | `USER \| ADMIN` | 是 | 平台角色。 |
+| `syncedAt` | `string` | 是 | 最近同步时间。 |
+
+飞书 `openId` 是服务端身份映射字段，不在公开 User DTO 中返回。
 
 ### 4.2 Tag
 
-| 字段 | 类型 | 必返 | 说明 |
-| --- | --- | --- | --- |
-| `id` | `string` | 是 | Tag UUID。 |
-| `name` | `string` | 是 | Tag 展示名。 |
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | ---: | --- |
+| `id` | `string` | 是 | 稳定标识。 |
+| `name` | `string` | 是 | 展示名称。 |
 
-### 4.3 SkillSummary
+Tag 治理规则暂缓。单个 Skill 最多关联 5 个 Tag。
 
-| 字段 | 类型 | 必返 | 说明 |
-| --- | --- | --- | --- |
-| `id` | `string` | 是 | Skill UUID。 |
-| `skillName` | `string` | 是 | `SKILL.md` 中的名称，全局唯一且不可修改。 |
-| `displayName` | `string` | 是 | 平台展示名称。 |
-| `skillDescription` | `string` | 是 | 最新版本 `SKILL.md` 中的描述。 |
-| `displayDescription` | `string` | 是 | 平台展示简介。 |
-| `tags` | `Tag[]` | 是 | 最多 5 个。 |
-| `latestVersion` | `SkillVersionSummary` | 是 | 最新版本摘要。 |
-| `uploadedBy` | `User` | 是 | 首次上传并创建 Skill 的用户。 |
-| `updatedBy` | `User` | 是 | 最近修改平台信息或发布新版本的用户。 |
-| `installCount` | `number` | 是 | 成功安装操作总数。 |
-| `createdAt` | `string` | 是 | 创建时间。 |
-| `updatedAt` | `string` | 是 | 最近修改平台信息或发布新版本的时间。 |
+### 4.3 SkillVersion
 
-### 4.4 SkillVersion
-
-| 字段 | 类型 | 必返 | 说明 |
-| --- | --- | --- | --- |
-| `id` | `string` | 是 | 版本 UUID。 |
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | ---: | --- |
+| `id` | `string` | 是 | 版本标识。 |
+| `skillId` | `string` | 是 | 所属 Skill。 |
 | `version` | `string` | 是 | SemVer。 |
-| `skillName` | `string` | 是 | 该版本 `SKILL.md` 中的名称。 |
-| `skillDescription` | `string` | 是 | 该版本 `SKILL.md` 中的描述。 |
-| `changelog` | `string \| null` | 是 | 首版可以为空，更新版本必填。 |
-| `packageSize` | `number` | 是 | ZIP 字节数。 |
-| `packageSha256` | `string` | 是 | 原始 ZIP 哈希。 |
+| `status` | `PUBLISHED \| WITHDRAWN` | 是 | 版本状态。 |
+| `skillName` | `string` | 是 | 此版本 `SKILL.md` 的名称。 |
+| `skillDescription` | `string` | 是 | 此版本 `SKILL.md` 的描述。 |
+| `changelog` | `string` | 是 | 不可变更新说明。 |
+| `baseVersionId` | `string \| null` | 是 | 发布依据；`1.0.0` 为 `null`。 |
+| `packageSize` | `integer` | 是 | ZIP 字节数。 |
+| `packageSha256` | `string` | 是 | ZIP SHA-256。 |
 | `contentHash` | `string` | 是 | 规范化目录内容哈希。 |
-| `skillMd` | `string` | 是 | 该版本原始 `SKILL.md` 快照。 |
+| `uploadedBy` | `User` | 是 | 实际上传者。 |
 | `publishedAt` | `string` | 是 | 发布时间。 |
-| `uploadedBy` | `User` | 是 | 版本上传者。 |
+| `withdrawnBy` | `User \| null` | 是 | 撤回人。 |
+| `withdrawnAt` | `string \| null` | 是 | 撤回时间。 |
+| `withdrawalReason` | `string \| null` | 是 | 撤回原因。 |
 
-### 4.5 服务端与本地状态边界
+`SkillVersionDetail` 在此基础上增加原始 `skillMd`。
 
-以下字段不能加入服务端 Skill 响应：
+### 4.4 SkillSummary
 
-- `installed`
-- `installedVersionId`
-- `localModified`
-- `installPath`
-- `backupCount`
-- `claudeLinkStatus`
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | ---: | --- |
+| `id` | `string` | 是 | Skill 标识。 |
+| `skillName` | `string` | 是 | 全局唯一且不可修改。 |
+| `displayName` | `string` | 是 | 平台展示名称。 |
+| `skillDescription` | `string` | 是 | 当前可用版本原始描述。 |
+| `displayDescription` | `string` | 是 | 平台展示简介。 |
+| `status` | `ACTIVE \| ARCHIVED \| NAME_CONFLICT` | 是 | 在线状态。 |
+| `owner` | `User` | 是 | 当前 Owner。 |
+| `tags` | `Tag[]` | 是 | 最多 5 个。 |
+| `currentVersion` | `SkillVersion` | 是 | 最高 `PUBLISHED` 版本。 |
+| `installCount` | `integer` | 是 | 成功安装操作总数。 |
+| `derivedFrom` | `DerivedSource \| null` | 是 | 直接派生来源。 |
+| `updatedBy` | `User` | 是 | 最近版本或平台信息更新者。 |
+| `archivedAt` | `string \| null` | 是 | 归档时间。 |
+| `archiveReason` | `string \| null` | 是 | 归档原因。 |
+| `nameConflictReason` | `string \| null` | 是 | 名称冲突说明。 |
+| `createdAt` | `string` | 是 | 创建时间。 |
+| `updatedAt` | `string` | 是 | 最近更新时间。 |
 
-这些值由 Tauri 客户端扫描本地目录后与服务端数据合并。
+`DerivedSource` 包含来源 `skillId`、`skillName`、版本编号、来源状态和是否可打开公开详情。
+
+### 4.5 SkillDetail
+
+`SkillDetail` 包含 `SkillSummary` 全部字段，并增加：
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | ---: | --- |
+| `collaborators` | `User[]` | 是 | 成功发布过版本、且不等于当前 Owner 的用户。 |
+| `derivedChain` | `DerivedSource[]` | 是 | 从直接来源到根来源的链路。 |
+
+协作者排序和前 8 个头像属于前端显示规则，接口返回完整列表。
+
+### 4.6 FileEntry
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | ---: | --- |
+| `path` | `string` | 是 | 规范化相对路径。 |
+| `type` | `FILE \| DIRECTORY` | 是 | 条目类型。 |
+| `size` | `integer \| null` | 是 | 文件字节数。 |
+| `sha256` | `string \| null` | 是 | 普通文件哈希。 |
+| `previewable` | `boolean` | 是 | 是否支持文本预览。 |
+
+### 4.7 本地状态边界
+
+以下状态只属于客户端，不进入 Skill DTO：
+
+- `PLATFORM_INSTALLED`
+- `PLATFORM_MODIFIED`
+- `PLATFORM_MATCHED`
+- `LOCAL_UNKNOWN`
+- `MISSING`
+- Claude 链接状态
+- 备份与恢复状态
 
 ## 5. 设备授权
 
 ### 5.1 发起授权
 
 ```http
-POST /api/auth/device/start
-Content-Type: application/json
+POST /api/auth/device
 ```
 
-请求：
+响应：
 
 ```json
 {
-  "clientName": "Kocotree Skills 0.1.0",
-  "deviceName": "KK-PC",
-  "platform": "windows"
-}
-```
-
-响应 `201`：
-
-```json
-{
-  "deviceCode": "koco_device_xxx",
-  "userCode": "6T5V-T6FK",
-  "verificationUrl": "https://skills.example.com/auth/device?...",
-  "expiresAt": "2026-07-15T09:40:00.000Z",
-  "pollInterval": 3
+  "deviceCode": "dev_xxx",
+  "verificationUrl": "https://example.test/device/dev_xxx",
+  "expiresIn": 600,
+  "interval": 2
 }
 ```
 
 ### 5.2 轮询授权
 
 ```http
-GET /api/auth/device/poll?deviceCode=koco_device_xxx
+GET /api/auth/device/{deviceCode}
 ```
 
-等待中响应 `200`：
-
-```json
-{
-  "status": "PENDING",
-  "pollInterval": 3
-}
-```
-
-授权成功响应 `200`：
-
-```json
-{
-  "status": "AUTHORIZED",
-  "user": {
-    "id": "4e6ee36b-e6ed-4400-b304-89f22c0527d1",
-    "name": "示例用户",
-    "email": null,
-    "avatarUrl": null,
-    "status": "ACTIVE"
-  },
-  "token": "koco_xxx",
-  "expiresAt": "2027-01-05T02:54:42.826Z"
-}
-```
-
-其他状态为 `EXPIRED`、`DENIED` 或 `EXCHANGED`。令牌只在首次成功领取时返回，不得写入普通日志。
+等待授权返回 `202`；成功返回访问令牌和 User；拒绝、过期分别返回对应错误。
 
 ### 5.3 当前用户
 
 ```http
-GET /api/me
+GET /api/users/me
 Authorization: Bearer <token>
 ```
 
-响应 `200`：
-
-```json
-{
-  "user": {
-    "id": "4e6ee36b-e6ed-4400-b304-89f22c0527d1",
-    "name": "示例用户",
-    "email": null,
-    "avatarUrl": null,
-    "status": "ACTIVE"
-  },
-  "scopes": ["skill:publish", "skill:install"]
-}
-```
+返回当前 User。
 
 ## 6. Tag
 
-### 6.1 获取 Tag 列表
+### 6.1 获取 Tag
 
 ```http
-GET /api/tags?q=代码
+GET /api/tags?query=开发
 ```
 
-匿名可用。响应 `200`：
-
-```json
-{
-  "items": [
-    {
-      "id": "2bb6b0f2-96f9-49e1-8c2c-a92503171001",
-      "name": "代码审查"
-    }
-  ]
-}
-```
-
-创建 Skill 或修改平台信息时可以同时提交已有 Tag 编号和新 Tag 名称。服务端负责规范化、去重和创建，不提供单独的新建或重命名 Tag 接口。
+匿名可用，返回 `Tag[]`。创建 Tag 通过 Skill 创建、版本发布或平台信息修改请求中的 `newTagNames` 完成。
 
 ## 7. Skill 查询
 
-### 7.1 获取 Skill 列表
+### 7.1 Skill 列表
 
 ```http
-GET /api/skills?q=审查&tagId=2bb6b0f2-96f9-49e1-8c2c-a92503171001&sort=updated&page=1&pageSize=20
+GET /api/skills?query=review&tagId=tag_dev&sort=UPDATED_DESC&page=1&pageSize=20
 ```
 
-查询参数：
+排序枚举：`UPDATED_DESC`、`CREATED_DESC`、`INSTALLS_DESC`。
 
-| 参数 | 类型 | 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `q` | `string` | 无 | 搜索 Skill 名称、展示名称、Skill 描述、展示简介和 Tag。 |
-| `tagId` | `string` | 无 | 单个 Tag UUID。 |
-| `sort` | `created \| updated \| popular` | `updated` | 创建时间、最新版本发布时间或安装次数倒序。 |
-| `page` | `number` | `1` | 页码。 |
-| `pageSize` | `number` | `20` | 每页数量，最大 50。 |
+公开列表不返回 `ARCHIVED`，但返回带不可安装状态的 `NAME_CONFLICT`。
 
-响应 `200`：
-
-```json
-{
-  "items": [
-    {
-      "id": "0c9c2f8d-3e84-4c0c-8a15-d41d87fd1001",
-      "skillName": "code-review",
-      "displayName": "代码审查助手",
-      "skillDescription": "Review code changes against project rules.",
-      "displayDescription": "按照团队规范检查代码变更。",
-      "tags": [
-        {
-          "id": "2bb6b0f2-96f9-49e1-8c2c-a92503171001",
-          "name": "代码审查"
-        }
-      ],
-      "latestVersion": {
-        "id": "8b37c0a5-f1c9-4f4e-a71b-b6f06f671001",
-        "version": "1.4.2",
-        "skillName": "code-review",
-        "skillDescription": "Review code changes against project rules.",
-        "packageSize": 12042,
-        "publishedAt": "2026-07-15T09:30:00.000Z",
-        "uploadedBy": {
-          "id": "4e6ee36b-e6ed-4400-b304-89f22c0527d1",
-          "name": "示例用户",
-          "email": null,
-          "avatarUrl": null,
-          "status": "ACTIVE"
-        }
-      },
-      "uploadedBy": {
-        "id": "4e6ee36b-e6ed-4400-b304-89f22c0527d1",
-        "name": "示例用户",
-        "email": null,
-        "avatarUrl": null,
-        "status": "ACTIVE"
-      },
-      "updatedBy": {
-        "id": "4e6ee36b-e6ed-4400-b304-89f22c0527d1",
-        "name": "示例用户",
-        "email": null,
-        "avatarUrl": null,
-        "status": "ACTIVE"
-      },
-      "installCount": 128,
-      "createdAt": "2026-06-01T09:30:00.000Z",
-      "updatedAt": "2026-07-15T09:30:00.000Z"
-    }
-  ],
-  "total": 1,
-  "page": 1,
-  "pageSize": 20
-}
-```
-
-### 7.2 获取 Skill 详情
+### 7.2 Skill 详情
 
 ```http
 GET /api/skills/{skillId}
 ```
 
-响应 `200` 包含完整 `SkillSummary`，并将 `latestVersion` 展开为完整版本信息：
+公开访问 `ARCHIVED` 返回 `404 SKILL_NOT_FOUND`。Owner、协作者或管理员携带令牌时可以读取归档管理详情。
 
-```json
-{
-  "latestVersion": {
-    "id": "8b37c0a5-f1c9-4f4e-a71b-b6f06f671001",
-    "version": "1.4.2",
-    "skillName": "code-review",
-    "skillDescription": "Review code changes against project rules.",
-    "changelog": "补充 TypeScript 检查规则",
-    "packageSize": 12042,
-    "packageSha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "contentHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-    "skillMd": "---\nname: code-review\ndescription: Review code changes.\n---\n",
-    "publishedAt": "2026-07-15T09:30:00.000Z",
-    "uploadedBy": {
-      "id": "4e6ee36b-e6ed-4400-b304-89f22c0527d1",
-      "name": "示例用户",
-      "email": null,
-      "avatarUrl": null,
-      "status": "ACTIVE"
-    }
-  }
-}
-```
-
-完整响应仍包含列表项中的其他字段。找不到 Skill 返回 `404 SKILL_NOT_FOUND`。
-
-### 7.3 获取版本历史
+### 7.3 版本历史
 
 ```http
 GET /api/skills/{skillId}/versions?page=1&pageSize=20
 ```
 
-响应 `200`：
+返回 `PUBLISHED` 与 `WITHDRAWN`，按 SemVer 降序。公开访问归档 Skill 返回不存在。
 
-```json
-{
-  "items": [
-    {
-      "id": "8b37c0a5-f1c9-4f4e-a71b-b6f06f671001",
-      "version": "1.4.2",
-      "skillName": "code-review",
-      "skillDescription": "Review code changes against project rules.",
-      "changelog": "补充 TypeScript 检查规则",
-      "packageSize": 12042,
-      "packageSha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "contentHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      "skillMd": "---\nname: code-review\n---\n",
-      "publishedAt": "2026-07-15T09:30:00.000Z",
-      "uploadedBy": {
-        "id": "4e6ee36b-e6ed-4400-b304-89f22c0527d1",
-        "name": "示例用户",
-        "email": null,
-        "avatarUrl": null,
-        "status": "ACTIVE"
-      }
-    }
-  ],
-  "total": 1,
-  "page": 1,
-  "pageSize": 20
-}
+### 7.4 版本详情
+
+```http
+GET /api/skills/{skillId}/versions/{versionId}
 ```
 
-版本按 SemVer 从高到低返回。
+返回 `SkillVersionDetail`，包括原始 `skillMd`。
 
-### 7.4 获取指定版本文件树
+### 7.5 文件树
 
 ```http
 GET /api/skills/{skillId}/versions/{versionId}/files
 ```
 
-匿名可用。响应 `200`：
+返回该版本完整 `FileEntry[]`。
 
-```json
-{
-  "items": [
-    {
-      "path": "references",
-      "type": "DIRECTORY",
-      "size": null,
-      "mediaType": null,
-      "previewable": false
-    },
-    {
-      "path": "SKILL.md",
-      "type": "FILE",
-      "size": 2480,
-      "mediaType": "text/markdown",
-      "previewable": true
-    },
-    {
-      "path": "references/usage.md",
-      "type": "FILE",
-      "size": 1024,
-      "mediaType": "text/markdown",
-      "previewable": true
-    }
-  ]
-}
-```
-
-`path` 是去除单层外包装目录后的规范化相对路径。目录的 `size` 和 `mediaType` 为 `null`；普通文件的 `size` 是解压后的字节数。响应最多包含 5,000 个条目，并按路径稳定排序。
-
-### 7.5 获取指定文本文件内容
+### 7.6 文本文件内容
 
 ```http
-GET /api/skills/{skillId}/versions/{versionId}/files/content?path=references%2Fusage.md
+GET /api/skills/{skillId}/versions/{versionId}/files/content?path=references%2Fguide.md
 ```
 
-匿名可用。客户端只能传入文件树接口返回的 `path`。响应 `200`：
+只返回 `previewable=true` 的文件：
 
 ```json
 {
-  "path": "references/usage.md",
-  "mediaType": "text/markdown",
-  "encoding": "UTF-8",
-  "size": 1024,
-  "content": "# 使用说明\n"
+  "path": "references/guide.md",
+  "content": "# Guide\n",
+  "sha256": "sha256:..."
 }
 ```
 
-接口按需读取单个文件，不在文件树响应中内嵌文件内容。二进制文件、无法按 UTF-8 解码的文件或超过预览上限的文件返回 `415 FILE_PREVIEW_UNAVAILABLE`；路径不存在返回 `404 FILE_NOT_FOUND`。
+### 7.7 我的在线 Skill
 
-## 8. 上传、发布与平台信息
+```http
+GET /api/users/me/skills?relation=OWNED&page=1&pageSize=20
+```
 
-### 8.1 本地解析 ZIP
+`relation` 支持 `OWNED`、`COLLABORATED`、`ARCHIVED`。本地 Skill 列表由客户端扫描，不使用此接口。
 
-选择 ZIP 后，客户端使用本地解析器读取文件，不发起 HTTP 请求。解析结果只保存在当前上传页面的内存状态中，包含 Skill 名称、Skill 描述、`SKILL.md`、文件数、包大小、包哈希和内容哈希。关闭或刷新页面后状态清空，用户需要重新选择文件。
+## 8. 创建、更新和平台信息
 
-本地解析用于尽早展示信息和反馈包结构错误，不作为服务端可信数据。创建 Skill 或发布新版本时，服务端必须重新解析同一请求中的 ZIP，并重新计算哈希。
-
-### 8.2 创建 Skill
+### 8.1 创建 Skill
 
 ```http
 POST /api/skills
-Authorization: Bearer <token>
 Content-Type: multipart/form-data
+Authorization: Bearer <token>
 ```
 
-请求使用 FormData，一次提交以下字段：
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | ---: | --- |
+| `file` | ZIP | 是 | 原始 ZIP。 |
+| `displayName` | `string` | 是 | 平台展示名称。 |
+| `displayDescription` | `string` | 是 | 平台展示简介。 |
+| `tagIds` | `string[]` | 否 | 已有 Tag。 |
+| `newTagNames` | `string[]` | 否 | 新 Tag 名称。 |
+| `confirmDuplicateDisplayName` | `boolean` | 否 | 确认展示名称重名。 |
+| `forkedFromSkillId` | `string` | 否 | 派生来源 Skill。 |
+| `forkedFromVersionId` | `string` | 否 | 派生来源版本。 |
 
-| 字段 | 类型 | 必填 | 示例 |
-| --- | --- | --- | --- |
-| `file` | ZIP 二进制 | 是 | `code-review.zip` |
-| `displayName` | 字符串 | 是 | `代码审查助手` |
-| `displayDescription` | 字符串 | 是 | `按照团队规范检查代码变更。` |
-| `tags` | `application/json` 部件 | 是 | `{"tagIds":["2bb6b0f2-96f9-49e1-8c2c-a92503171001"],"newTagNames":["TypeScript"]}` |
-| `version` | SemVer 字符串 | 是 | `1.0.0` |
-| `changelog` | 字符串 | 否 | `首次发布` |
+来源字段必须同时出现。服务端固定创建 `1.0.0`，更新说明为“首次发布”。重名展示名称返回需要确认的业务错误，客户端确认后使用 `confirmDuplicateDisplayName=true` 重试。
 
-客户端让运行时自动生成 multipart boundary。服务端先校验 ZIP，再使用解析出的 Skill 名称和描述创建实体。
+响应 `201 SkillDetail`。
 
-响应 `201` 为完整 `SkillDetail`。若 Skill 名称已存在，返回 `409 DUPLICATE_SKILL_NAME`，并在 `details.skillId` 中提供现有 Skill 编号。
+### 8.2 发布新版本
+
+```http
+POST /api/skills/{skillId}/versions
+Content-Type: multipart/form-data
+Authorization: Bearer <token>
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+| --- | --- | ---: | --- |
+| `file` | ZIP | 是 | 原始 ZIP。 |
+| `baseVersionId` | `string` | 是 | 当前版本标识。 |
+| `version` | `string` | 是 | 更高 SemVer。 |
+| `changelog` | `string` | 是 | 不可变更新说明。 |
+| `displayName` | `string` | 否 | 仅 Owner 可提交。 |
+| `displayDescription` | `string` | 否 | Owner 或协作者可提交。 |
+| `tagIds` | `string[]` | 否 | 出现时完整替换 Tag 关联。 |
+| `newTagNames` | `string[]` | 否 | 新 Tag 名称。 |
+| `confirmDuplicateDisplayName` | `boolean` | 否 | Owner 确认展示名称重名。 |
+
+任何登录用户可以更新 `ACTIVE` Skill；`ARCHIVED` 只允许 Owner、已有协作者和管理员。首次更新者在同一事务成功后成为协作者并可应用展示简介与 Tags。任何字段失败都会回滚整个请求。
+
+响应 `201 SkillDetail`。
 
 ### 8.3 修改平台信息
 
 ```http
 PATCH /api/skills/{skillId}
-Authorization: Bearer <token>
 Content-Type: application/json
+Authorization: Bearer <token>
 ```
-
-请求中的字段均可选，但至少提交一个字段：
 
 ```json
 {
   "displayName": "代码审查助手",
   "displayDescription": "检查代码和配置变更。",
-  "tags": {
-    "tagIds": ["2bb6b0f2-96f9-49e1-8c2c-a92503171001"],
-    "newTagNames": ["Rust"]
-  }
+  "tagIds": ["tag_dev"],
+  "newTagNames": [],
+  "confirmDuplicateDisplayName": false
 }
 ```
 
-只有 Skill 的 `uploadedBy` 可以调用。`tags` 出现时表示完整替换 Skill 的 Tag 关联，`tagIds` 与 `newTagNames` 合并去重后最多 5 个。修改成功返回完整 `SkillDetail`，更新 `updatedBy` 和 `updatedAt`，但不创建 SkillVersion。其他登录用户返回 `403 NOT_SKILL_OWNER`。
+请求至少包含一个可修改字段。`displayName` 仅 Owner 可改；展示简介和 Tags 允许 Owner 与协作者修改。修改不创建版本，采用后提交覆盖前提交。修改为重名展示名称时，客户端确认后携带 `confirmDuplicateDisplayName=true` 重试。
 
-### 8.4 发布新版本
+## 9. 撤回、归档与恢复
+
+### 9.1 撤回版本
 
 ```http
-POST /api/skills/{skillId}/versions
+POST /api/skills/{skillId}/versions/{versionId}/withdraw
 Authorization: Bearer <token>
-Content-Type: multipart/form-data
 ```
 
-请求使用 FormData，一次提交 `file`、`version` 和 `changelog`。`file` 是最大 50 MB 的原始 ZIP，`version` 示例为 `1.5.0`，`changelog` 示例为“增加 Rust 项目审查规则”。
+```json
+{
+  "reason": "该版本包含错误的操作指引。"
+}
+```
 
-任意已登录用户都可以发布新版本。请求不接受 `displayName`、`displayDescription` 或 `tags`，响应 `201` 为更新后的完整 `SkillDetail`；Skill 的 `updatedBy` 更新为该版本上传者。
+`1.0.0` 返回 `INITIAL_VERSION_IMMUTABLE`。撤回不可逆，响应为更新后的 `SkillVersion`。
 
-校验失败：
+### 9.2 归档 Skill
+
+```http
+POST /api/skills/{skillId}/archive
+Authorization: Bearer <token>
+```
+
+```json
+{
+  "reason": "该 Skill 已停止维护。"
+}
+```
+
+仅 Owner 或管理员可用，原因必填且不可修改。
+
+### 9.3 恢复 Skill
+
+```http
+POST /api/skills/{skillId}/restore
+Authorization: Bearer <token>
+```
+
+```json
+{
+  "reason": "维护工作已经恢复。"
+}
+```
+
+不强制先发布新版本，响应为恢复后的 `SkillDetail`。
+
+### 9.4 已安装客户端查询状态
+
+```http
+GET /api/skills/{skillId}/installation-status
+Authorization: Bearer <token>
+```
+
+归档时只返回：
+
+```json
+{
+  "skillId": "skill_123",
+  "status": "ARCHIVED",
+  "archivedAt": "2026-07-17T10:00:00+08:00",
+  "archiveReason": "该 Skill 已停止维护。"
+}
+```
+
+## 10. 所有权转移
+
+### 10.1 发起邀请
+
+```http
+POST /api/skills/{skillId}/ownership-transfers
+Authorization: Bearer <token>
+```
+
+```json
+{
+  "targetUserId": "user_456",
+  "reason": "原 Owner 账号已停用。"
+}
+```
+
+有效 Owner 只能选择已有协作者，`reason` 可选。管理员只能处理停用 Owner，必须填写原因；没有协作者时可以选择任意登录过平台的活跃用户。
+
+### 10.2 接受、拒绝和取消
+
+```http
+POST /api/ownership-transfers/{transferId}/accept
+POST /api/ownership-transfers/{transferId}/reject
+POST /api/ownership-transfers/{transferId}/cancel
+```
+
+邀请 7 天后自动过期。同一 Skill 同时只能存在一个 `PENDING` 邀请。
+
+## 11. 下载、安装匹配与上报
+
+### 11.1 获取下载凭证
+
+```http
+POST /api/skills/{skillId}/versions/{versionId}/download-tickets
+Authorization: Bearer <token>
+```
+
+只允许 `PUBLISHED` 版本。响应：
+
+```json
+{
+  "url": "https://download.example.test/file.zip",
+  "expiresAt": "2026-07-17T10:05:00+08:00",
+  "packageSha256": "sha256:...",
+  "contentHash": "sha256:..."
+}
+```
+
+### 11.2 恢复平台匹配
+
+```http
+POST /api/installations/resolve
+Authorization: Bearer <token>
+```
+
+```json
+{
+  "skillName": "code-review",
+  "contentHash": "sha256:..."
+}
+```
+
+匹配成功返回 `skillId`、`versionId` 和在线状态；归档 Skill 只返回最小归档状态。此操作不增加安装次数。
+
+### 11.3 上报安装成功
+
+```http
+POST /api/installations/events
+Authorization: Bearer <token>
+```
+
+```json
+{
+  "eventId": "01J...",
+  "skillId": "skill_123",
+  "versionId": "ver_143",
+  "installedAt": "2026-07-17T10:02:00+08:00"
+}
+```
+
+相同 `eventId` 重试返回成功但不重复计数。凭证恢复、下载失败、取消和安装失败不上报。
+
+## 12. 通知
+
+### 12.1 获取通知
+
+```http
+GET /api/notifications?page=1&pageSize=20&unreadOnly=true
+Authorization: Bearer <token>
+```
+
+通知包含版本发布、展示信息修改、所有权邀请和状态变化。客户端只显示弱提醒红点。
+
+### 12.2 标记已读
+
+```http
+POST /api/notifications/{notificationId}/read
+POST /api/notifications/read-all
+```
+
+两个接口均返回 `204`。
+
+## 13. 常见错误码
 
 | HTTP | 错误码 | 说明 |
-| --- | --- | --- |
+| ---: | --- | --- |
+| 400 | `INVALID_REQUEST` | 请求字段不合法。 |
+| 400 | `INVALID_ZIP` | ZIP 损坏或结构不合法。 |
+| 400 | `INVALID_SKILL_NAME` | `skillName` 格式不合法。 |
+| 400 | `SKILL_NAME_RESERVED` | 命中保留名称。 |
 | 400 | `INVALID_SEMVER` | 版本号不是合法 SemVer。 |
-| 409 | `VERSION_ALREADY_EXISTS` | 相同版本号已存在。 |
-| 409 | `VERSION_NOT_GREATER` | 新版本没有高于当前最新版本。 |
-| 409 | `SKILL_NAME_MISMATCH` | ZIP 中的 Skill 名称与目标 Skill 不一致。 |
+| 400 | `VERSION_NOT_GREATER` | 版本号未高于最高历史版本。 |
+| 400 | `CONTENT_UNCHANGED` | 内容与历史版本一致。 |
+| 400 | `INITIAL_VERSION_IMMUTABLE` | `1.0.0` 不允许撤回。 |
+| 401 | `AUTH_REQUIRED` | 未登录或令牌失效。 |
+| 403 | `FORBIDDEN` | 当前用户无权执行操作。 |
+| 403 | `DISPLAY_NAME_OWNER_ONLY` | 非 Owner 修改展示名称。 |
+| 404 | `SKILL_NOT_FOUND` | Skill 不存在或公开不可见。 |
+| 404 | `VERSION_NOT_FOUND` | 版本不存在。 |
+| 409 | `SKILL_NAME_CONFLICT` | `skillName` 已被占用。 |
+| 409 | `DISPLAY_NAME_CONFIRMATION_REQUIRED` | 展示名称重名，需要确认。 |
+| 409 | `VERSION_CONFLICT` | `baseVersionId` 已过期。 |
+| 409 | `SKILL_NAME_MISMATCH` | 更新 ZIP 名称与目标 Skill 不一致。 |
+| 409 | `SKILL_UNAVAILABLE` | Skill 已归档或名称冲突，当前操作不可用。 |
+| 409 | `TRANSFER_ALREADY_PENDING` | 已存在待确认转移邀请。 |
+| 413 | `PACKAGE_TOO_LARGE` | ZIP 超过 50 MB。 |
+| 422 | `PACKAGE_HASH_MISMATCH` | 服务端或客户端下载校验失败。 |
 
-`SKILL_NAME_MISMATCH` 的 `details` 返回 `expectedSkillName` 和 `actualSkillName`，客户端据此建议发布为新 Skill。
-
-## 9. 下载与安装上报
-
-### 9.1 获取指定版本下载凭证
-
-```http
-GET /api/skills/{skillId}/versions/{versionId}/download
-Authorization: Bearer <token>
-```
-
-响应 `200`：
-
-```json
-{
-  "url": "https://storage.example.com/signed-url",
-  "expiresAt": "2026-07-15T09:35:00.000Z",
-  "packageSize": 12042,
-  "packageSha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  "contentHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-}
-```
-
-生成下载凭证不增加安装次数。
-
-### 9.2 上报成功安装
-
-```http
-POST /api/skills/{skillId}/versions/{versionId}/install-events
-Authorization: Bearer <token>
-Content-Type: application/json
-```
-
-请求：
-
-```json
-{
-  "eventId": "91d73c57-0f5f-4986-8214-3bd040fa6152",
-  "deviceId": "device_01J...",
-  "platform": "windows",
-  "clientVersion": "0.1.0",
-  "installedAt": "2026-07-15T09:32:00.000Z"
-}
-```
-
-响应 `200`：
-
-```json
-{
-  "recorded": true,
-  "installCount": 129
-}
-```
-
-`eventId` 是幂等键。网络重试提交相同事件时返回 `recorded: false`，且安装次数不重复增加。
-
-## 10. 常见错误码
-
-| HTTP | 错误码 | 含义 |
-| --- | --- | --- |
-| 400 | `INVALID_REQUEST` | 参数、分页或字段校验失败。 |
-| 400 | `INVALID_SKILL_PACKAGE` | ZIP 结构或 `SKILL.md` 不合法。 |
-| 400 | `PACKAGE_TOO_LARGE` | ZIP 或解压内容超出限制。 |
-| 400 | `INVALID_SEMVER` | 版本号不是合法 SemVer。 |
-| 401 | `UNAUTHENTICATED` | Token 缺失、无效或过期。 |
-| 403 | `USER_DISABLED` | 当前用户被停用。 |
-| 403 | `NOT_SKILL_OWNER` | 当前用户不是 Skill 原上传者，不能修改平台信息。 |
-| 404 | `SKILL_NOT_FOUND` | Skill 不存在。 |
-| 404 | `VERSION_NOT_FOUND` | 版本不存在或不属于该 Skill。 |
-| 404 | `FILE_NOT_FOUND` | 文件不存在或不属于该版本。 |
-| 409 | `DUPLICATE_SKILL_NAME` | Skill 名称已存在。 |
-| 409 | `SKILL_NAME_MISMATCH` | 更新包中的 Skill 名称不匹配。 |
-| 409 | `VERSION_ALREADY_EXISTS` | 版本号重复。 |
-| 409 | `VERSION_NOT_GREATER` | 版本号没有严格递增。 |
-| 415 | `FILE_PREVIEW_UNAVAILABLE` | 文件不是可预览的 UTF-8 文本或超过预览上限。 |
-| 503 | `DOWNLOAD_UNAVAILABLE` | 暂时无法生成下载地址。 |
-
-## 11. TypeScript DTO 示例
-
-以下类型用于说明前端边界。实际开发时应从 `openapi.yaml` 生成服务端 DTO，发布请求适配器把 OpenAPI 的 binary `file` 映射为浏览器 `File`。
+## 14. TypeScript DTO 示例
 
 ```ts
 export interface UserDto {
   id: string;
   name: string;
-  email: string | null;
   avatarUrl: string | null;
   departmentPath: string[];
   status: "ACTIVE" | "DISABLED";
+  role: "USER" | "ADMIN";
+  syncedAt: string;
+}
+
+export interface SkillVersionDto {
+  id: string;
+  skillId: string;
+  version: string;
+  status: "PUBLISHED" | "WITHDRAWN";
+  skillName: string;
+  skillDescription: string;
+  changelog: string;
+  baseVersionId: string | null;
+  packageSize: number;
+  packageSha256: string;
+  contentHash: string;
+  uploadedBy: UserDto;
+  publishedAt: string;
+  withdrawnBy: UserDto | null;
+  withdrawnAt: string | null;
+  withdrawalReason: string | null;
 }
 
 export interface TagDto {
@@ -603,18 +570,13 @@ export interface TagDto {
   name: string;
 }
 
-export interface SkillVersionDto {
-  id: string;
-  version: string;
+export interface DerivedSourceDto {
+  skillId: string;
   skillName: string;
-  skillDescription: string;
-  changelog: string | null;
-  packageSize: number;
-  packageSha256: string;
-  contentHash: string;
-  skillMd: string;
-  publishedAt: string;
-  uploadedBy: UserDto;
+  versionId: string;
+  version: string;
+  status: "ACTIVE" | "ARCHIVED" | "NAME_CONFLICT";
+  linkable: boolean;
 }
 
 export interface SkillSummaryDto {
@@ -623,145 +585,26 @@ export interface SkillSummaryDto {
   displayName: string;
   skillDescription: string;
   displayDescription: string;
+  status: "ACTIVE" | "ARCHIVED" | "NAME_CONFLICT";
+  owner: UserDto;
   tags: TagDto[];
-  latestVersion: Omit<
-    SkillVersionDto,
-    "changelog" | "packageSha256" | "contentHash" | "skillMd"
-  >;
-  uploadedBy: UserDto;
-  updatedBy: UserDto;
+  currentVersion: SkillVersionDto;
   installCount: number;
+  derivedFrom: DerivedSourceDto | null;
+  updatedBy: UserDto;
+  archivedAt: string | null;
+  archiveReason: string | null;
+  nameConflictReason: string | null;
   createdAt: string;
   updatedAt: string;
 }
-
-export interface SkillDetailDto extends Omit<SkillSummaryDto, "latestVersion"> {
-  latestVersion: SkillVersionDto;
-}
-
-export interface TagAssignmentDto {
-  tagIds: string[];
-  newTagNames: string[];
-}
-
-export interface CreateSkillDto {
-  file: File;
-  displayName: string;
-  displayDescription: string;
-  tags: TagAssignmentDto;
-  version: string;
-  changelog?: string;
-}
-
-export interface UpdateSkillMetadataDto {
-  displayName?: string;
-  displayDescription?: string;
-  tags?: TagAssignmentDto;
-}
-
-export interface PublishSkillVersionDto {
-  file: File;
-  version: string;
-  changelog: string;
-}
-
-export interface SkillFileEntryDto {
-  path: string;
-  type: "FILE" | "DIRECTORY";
-  size: number | null;
-  mediaType: string | null;
-  previewable: boolean;
-}
-
-export interface SkillFileListResponseDto {
-  items: SkillFileEntryDto[];
-}
-
-export interface SkillFileContentDto {
-  path: string;
-  mediaType: string;
-  encoding: "UTF-8";
-  size: number;
-  content: string;
-}
-
-export interface DownloadTicketDto {
-  url: string;
-  expiresAt: string;
-  packageSize: number;
-  packageSha256: string;
-  contentHash: string;
-}
-
-export interface InstallationEventDto {
-  eventId: string;
-  deviceId: string;
-  platform: "windows" | "macos" | "linux";
-  clientVersion: string;
-  installedAt: string;
-}
-
-export interface PageDto<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
-
-export interface ApiErrorDto {
-  error: string;
-  message: string;
-  details?: Record<string, unknown>;
-  requestId?: string;
-}
 ```
 
-本地模型单独定义：
+实际前端类型应从 OpenAPI 生成，不手工复制这段示例。
 
-```ts
-export interface SkillPackageInspection {
-  originalFileName: string;
-  skillName: string;
-  skillDescription: string;
-  skillMd: string;
-  packageSize: number;
-  fileCount: number;
-  packageSha256: string;
-  contentHash: string;
-  warnings: string[];
-}
+## 15. 模拟接口要求
 
-export type LocalSkillStatus =
-  | "NOT_INSTALLED"
-  | "INSTALLED"
-  | "MODIFIED"
-  | "UNKNOWN_SOURCE"
-  | "MISSING";
-
-export interface LocalInstallationState {
-  skillId: string;
-  versionId: string;
-  version: string;
-  skillName: string;
-  installPath: string;
-  contentHash: string;
-  installedAt: string;
-  serverUrl: string;
-  status: LocalSkillStatus;
-}
-```
-
-## 12. 模拟接口要求
-
-当前前端阶段的 `MockSkillApi` 必须与未来 `HttpSkillApi` 实现同一个 TypeScript 接口，并覆盖：
-
-- 正常列表、空列表、加载延迟和请求失败。
-- 匿名浏览与受保护动作触发登录。
-- 本地 ZIP 目录解析、`SKILL.md` frontmatter 校验、发布时服务端重新校验和包不合法。
-- 创建 Skill、Skill 名称冲突和上传新版本。
-- 原上传者修改平台信息、非原上传者被拒绝和 Tag 完整替换。
-- SemVer 递增校验与 Skill 名称不匹配。
-- 指定版本下载凭证与幂等安装事件。
-- 指定版本文件树、可预览 UTF-8 文本和不可预览文件错误。
-
-模拟阶段在浏览器内解析用户选择的真实 ZIP，并把发布后的文件清单和文本内容保存在内存中；下载地址仍可使用虚拟值，不执行真实文件上传或本地安装。
+- 模拟实现与真实 HTTP 客户端实现同一 TypeScript 接口。
+- 覆盖匿名浏览、登录恢复动作、新建、更新、并发冲突、撤回、归档、所有权邀请、历史版本安装和安装上报。
+- 模拟数据不能被 React 组件直接导入。
+- 本地安装状态与服务端 DTO 明确隔离。
