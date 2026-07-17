@@ -261,32 +261,6 @@ export function SkillDetailModal({
           {detail ? (
             <>
               {detail.status === "ACTIVE" && (
-                <Button className="detail-secondary-action" theme="light" type="tertiary" onClick={() => onUploadVersion(detail)}>
-                  上传新版本
-                </Button>
-              )}
-              {canManageVersion && (
-                <Dropdown
-                  className="detail-more-menu"
-                  contentClassName="detail-more-dropdown"
-                  position="top"
-                  trigger="click"
-                  render={(
-                    <Dropdown.Menu>
-                      <Dropdown.Item onClick={() => setMetadataVisible(true)}>编辑展示信息</Dropdown.Item>
-                      {canManageSkill && detail.collaborators.some((user) => user.status === "ACTIVE") && (
-                        <Dropdown.Item onClick={() => setOwnershipVisible(true)}>转移所有权</Dropdown.Item>
-                      )}
-                      {canManageSkill && detail.status === "ACTIVE" && (
-                        <Dropdown.Item type="danger" onClick={() => { setManagementReason(""); setManagementAction({ type: "archive" }); }}>归档 Skill</Dropdown.Item>
-                      )}
-                    </Dropdown.Menu>
-                  )}
-                >
-                  <Button className="detail-more-trigger" aria-label="更多管理操作" icon={<AppIcon name="more" size={18} />} />
-                </Dropdown>
-              )}
-              {detail.status === "ACTIVE" && (
                 <Button
                   theme="solid"
                   type="primary"
@@ -299,6 +273,32 @@ export function SkillDetailModal({
               )}
               {canManageSkill && detail.status === "ARCHIVED" && (
                 <Button theme="solid" type="primary" loading={managementLoading} onClick={() => void handleRestore()}>恢复 Skill</Button>
+              )}
+              {(detail.status === "ACTIVE" || canManageVersion) && (
+                <Dropdown
+                  className="detail-more-menu"
+                  contentClassName="detail-more-dropdown"
+                  position="top"
+                  trigger="click"
+                  render={(
+                    <Dropdown.Menu>
+                      {detail.status === "ACTIVE" && (
+                        <Dropdown.Item onClick={() => onUploadVersion(detail)}>上传新版本</Dropdown.Item>
+                      )}
+                      {canManageVersion && (
+                        <Dropdown.Item onClick={() => setMetadataVisible(true)}>编辑展示信息</Dropdown.Item>
+                      )}
+                      {canManageSkill && detail.collaborators.some((user) => user.status === "ACTIVE") && (
+                        <Dropdown.Item onClick={() => setOwnershipVisible(true)}>转移所有权</Dropdown.Item>
+                      )}
+                      {canManageSkill && detail.status === "ACTIVE" && (
+                        <Dropdown.Item type="danger" onClick={() => { setManagementReason(""); setManagementAction({ type: "archive" }); }}>归档 Skill</Dropdown.Item>
+                      )}
+                    </Dropdown.Menu>
+                  )}
+                >
+                  <Button className="detail-more-trigger" aria-label="更多管理操作" icon={<AppIcon name="more" size={18} />} />
+                </Dropdown>
               )}
             </>
           ) : <span className="detail-footer-placeholder" aria-hidden="true" />}

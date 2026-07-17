@@ -1126,17 +1126,6 @@ textarea:focus-visible,
   padding-top: 10px;
 }
 
-.detail-secondary-action {
-  border: 1px solid #d9dce1;
-  background: #fff;
-  color: #555a63;
-}
-
-.detail-secondary-action:hover {
-  border-color: #c7cbd1;
-  background: #f5f6f7;
-}
-
 .skill-detail-modal .ui-modal {
   width: min(900px, calc(100vw - 32px));
   max-width: calc(100vw - 32px);
@@ -1148,6 +1137,7 @@ textarea:focus-visible,
   min-height: 0;
   flex: 1;
   overflow: hidden;
+  padding: 16px 22px 12px;
 }
 
 .detail-loading,
@@ -1188,7 +1178,11 @@ textarea:focus-visible,
 .detail-body > .ui-tabs > .ui-tabs-list {
   width: max-content;
   max-width: 100%;
-  overflow-x: auto;
+  overflow: visible;
+}
+
+.detail-body > .ui-tabs > .ui-tabs-list > button {
+  font-size: 14px;
 }
 
 .detail-body > .ui-tabs > .ui-tabs-content {
@@ -1537,8 +1531,9 @@ textarea:focus-visible,
 
 .file-browser {
   display: grid;
-  min-height: 0;
-  flex: 1;
+  height: 300px;
+  min-height: 300px;
+  flex: none;
   overflow: hidden;
   grid-template-columns: 230px minmax(0, 1fr);
   border: 1px solid #e0e3e6;
