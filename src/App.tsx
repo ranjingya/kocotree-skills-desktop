@@ -474,14 +474,6 @@ function App() {
 
         <nav className="sidebar-nav" aria-label="主导航">
           <button
-            className={activePage === "my-skills" ? "active" : ""}
-            type="button"
-            onClick={() => setActivePage("my-skills")}
-          >
-            <AppIcon name="library" size={20} />
-            <span>我的 Skill</span>
-          </button>
-          <button
             className={activePage === "browse" ? "active" : ""}
             type="button"
             onClick={() => setActivePage("browse")}
@@ -496,6 +488,14 @@ function App() {
           >
             <AppIcon name="upload" size={20} />
             <span>上传 Skill</span>
+          </button>
+          <button
+            className={activePage === "my-skills" ? "active" : ""}
+            type="button"
+            onClick={() => setActivePage("my-skills")}
+          >
+            <AppIcon name="library" size={20} />
+            <span>我的 Skill</span>
           </button>
         </nav>
 
