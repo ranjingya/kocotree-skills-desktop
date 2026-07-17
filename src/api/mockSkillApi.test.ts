@@ -2,7 +2,7 @@ import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 import { SkillApiError } from "./contracts";
 import { MockSkillApi } from "./mockSkillApi";
-import { mockUsers, skillIds } from "./mockData";
+import { mockSkillDetails, mockUsers, skillIds } from "./mockData";
 import { MockLocalSkillService } from "./mockLocalSkillService";
 import { parseSkillPackage } from "./skillPackage";
 
@@ -35,6 +35,14 @@ describe("MockSkillApi", () => {
     const result = await api.listSkills();
     expect(result.items.length).toBeGreaterThan(0);
     expect(result.items.every((skill) => skill.status === "ACTIVE")).toBe(true);
+  });
+
+  it("为全部预置 Mock Skill 标记统一 Tag", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    const mockTag = (await api.listTags()).find((item) => item.name === "Mock");
+    expect(mockTag).toBeDefined();
+    expect(mockSkillDetails.every((skill) => skill.tags.some((tag) => tag.id === mockTag!.id))).toBe(true);
+    expect((await api.listSkills({ tagId: mockTag!.id })).items).toHaveLength((await api.listSkills()).items.length);
   });
 
   it("允许本地解析，但在发布前要求登录", async () => {

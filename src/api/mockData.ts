@@ -54,6 +54,11 @@ export const mockUsers = {
   },
 } satisfies Record<string, UserDto>;
 
+const mockDataTag: TagDto = {
+  id: "2bb6b0f2-96f9-49e1-8c2c-a92503171008",
+  name: "Mock",
+};
+
 export const mockTags: TagDto[] = [
   { id: "2bb6b0f2-96f9-49e1-8c2c-a92503171001", name: "代码审查" },
   { id: "2bb6b0f2-96f9-49e1-8c2c-a92503171002", name: "内容处理" },
@@ -62,6 +67,7 @@ export const mockTags: TagDto[] = [
   { id: "2bb6b0f2-96f9-49e1-8c2c-a92503171005", name: "项目协作" },
   { id: "2bb6b0f2-96f9-49e1-8c2c-a92503171006", name: "安全" },
   { id: "2bb6b0f2-96f9-49e1-8c2c-a92503171007", name: "安装异常" },
+  mockDataTag,
 ];
 
 const packageHash = `sha256:${"a".repeat(64)}`;
@@ -241,7 +247,7 @@ export const mockSkillDetails: SkillDetailDto[] = skillMeta.map((item) => {
     status,
     owner,
     collaborators: [...collaborators],
-    tags: tagIndexes.map((index) => mockTags[index]),
+    tags: [...tagIndexes.map((index) => mockTags[index]), mockDataTag],
     currentVersion,
     installCount,
     derivedFrom: override?.derivedFrom ?? null,
