@@ -1185,11 +1185,17 @@ textarea:focus-visible,
   flex-direction: column;
 }
 
+.detail-body > .ui-tabs > .ui-tabs-list {
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 .detail-body > .ui-tabs > .ui-tabs-content {
   min-height: 0;
   flex: 1;
   overflow: hidden;
-  padding: 0 10px;
+  padding: 14px 10px 0;
 }
 
 .detail-identity {
@@ -1347,7 +1353,7 @@ textarea:focus-visible,
 }
 
 .detail-section {
-  padding-top: 6px;
+  padding-top: 0;
 }
 
 .detail-section h3 {

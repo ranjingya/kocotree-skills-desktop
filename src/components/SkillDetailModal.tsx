@@ -397,7 +397,7 @@ export function SkillDetailModal({
                 ))}
               </div>
             </TabPane>
-            <TabPane tab="查看文件树" itemKey="files">
+            <TabPane tab="文件浏览" itemKey="files">
               <div className="file-tab-content">
                 <div className="file-browser-toolbar">
                   <span>版本文件</span>
