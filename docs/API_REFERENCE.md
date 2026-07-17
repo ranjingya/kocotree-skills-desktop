@@ -391,10 +391,9 @@ Authorization: Bearer <token>
 
 ```http
 GET /api/skills/{skillId}/installation-status?versionId={versionId}
-Authorization: Bearer <token>
 ```
 
-`versionId` 来自本地安装凭证，可选。响应不返回 ZIP、下载地址或完整平台展示信息。
+该接口允许匿名调用；登录状态只用于服务端审计，不扩大返回字段。`versionId` 来自本地安装凭证，可选。响应不返回 ZIP、下载地址或完整平台展示信息。
 
 归档且本地安装版本已撤回时返回：
 

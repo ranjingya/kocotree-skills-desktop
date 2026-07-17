@@ -425,6 +425,7 @@ paths:
       summary: 查询已安装 Skill 的在线状态
       operationId: getInstallationStatus
       security:
+        - {}
         - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/SkillId'

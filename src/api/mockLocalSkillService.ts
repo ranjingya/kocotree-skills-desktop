@@ -63,6 +63,18 @@ const initialRecords: LocalSkillRecord[] = [
     status: "PLATFORM_INSTALLED",
   },
   {
+    id: "local-online-unavailable-skill",
+    skillId: "0c9c2f8d-3e84-4c0c-8a15-d41d87fd1099",
+    versionId: "8b37c0a5-f1c9-4f4e-a71b-b6f06f671199",
+    version: "1.0.0",
+    skillName: "online-unavailable-demo",
+    displayName: "演示：在线信息不可用",
+    installPath: "~/.agents/skills/online-unavailable-demo",
+    contentHash: `sha256:${"b".repeat(64)}-1199`,
+    installedAt: "2026-07-11T08:00:00.000Z",
+    status: "PLATFORM_INSTALLED",
+  },
+  {
     id: "local-conflict-demo",
     skillId: null,
     versionId: null,

@@ -1981,14 +1981,41 @@ button.my-skill-row:hover {
   color: #969aa2;
 }
 
+.my-skill-main .my-skill-warning {
+  overflow: visible;
+  color: #8a6822;
+  line-height: 1.45;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.my-skill-statuses {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+}
+
 .local-status,
-.skill-status {
+.skill-status,
+.online-status {
   padding: 4px 9px;
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);
   font-size: 11px;
   white-space: nowrap;
+}
+
+.online-status-archived,
+.online-status-unavailable {
+  background: #f1f2f3;
+  color: #6f747c;
+}
+
+.online-status-conflict,
+.online-status-withdrawn {
+  background: #fff4d8;
+  color: #86651d;
 }
 
 .local-status-local_unknown,

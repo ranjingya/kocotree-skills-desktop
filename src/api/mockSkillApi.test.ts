@@ -206,6 +206,11 @@ describe("MockSkillApi", () => {
     const withdrawn = await api.getInstallationStatus(skillIds.withdrawn, "8b37c0a5-f1c9-4f4e-a71b-b6f06f671116");
     expect(withdrawn.versionStatus).toBe("WITHDRAWN");
     expect(withdrawn.recommendedVersion?.version).toBe("1.2.0");
+
+    const localApi = new MockLocalSkillService(0);
+    const unavailable = (await localApi.scanSkills()).find((record) => record.skillName === "online-unavailable-demo")!;
+    await expect(api.getInstallationStatus(unavailable.skillId!, unavailable.versionId!))
+      .rejects.toSatisfy((reason: unknown) => expectApiError(reason, "SKILL_NOT_FOUND"));
   });
 
   it("安装包校验失败时停止签发下载凭证", async () => {

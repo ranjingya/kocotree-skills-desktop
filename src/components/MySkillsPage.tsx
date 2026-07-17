@@ -4,6 +4,7 @@ import {
   localSkillService,
   skillApi,
   SkillApiError,
+  type InstallationStatusDto,
   type LocalSkillRecord,
   type SkillSummaryDto,
   type UserDto,
@@ -20,6 +21,48 @@ const localStatusLabels: Record<LocalSkillRecord["status"], string> = {
   LOCAL_UNKNOWN: "本地 Skill",
   MISSING: "目录缺失",
 };
+
+interface LocalSkillView {
+  record: LocalSkillRecord;
+  onlineStatus: InstallationStatusDto | null;
+  onlineUnavailable: boolean;
+}
+
+interface StatusBadge {
+  key: string;
+  label: string;
+  tone: "archived" | "conflict" | "withdrawn" | "unavailable";
+}
+
+/**
+ * 功能说明：把平台生命周期和本地安装版本状态转换为本地列表使用的标签与说明。
+ * @param item - 已合并本地记录与在线状态的 Skill。
+ * @returns 需要展示的状态标签和补充说明。
+ */
+function getOnlinePresentation(item: LocalSkillView): { badges: StatusBadge[]; note: string | null } {
+  if (item.onlineUnavailable) {
+    return { badges: [{ key: "unavailable", label: "在线信息不可用", tone: "unavailable" }], note: "已保留平台凭证，可以重新检查在线状态。" };
+  }
+  const status = item.onlineStatus;
+  if (!status) return { badges: [], note: null };
+
+  const badges: StatusBadge[] = [];
+  const notes: string[] = [];
+  if (status.status === "ARCHIVED") {
+    badges.push({ key: "archived", label: "平台已归档 · 本地可用", tone: "archived" });
+    if (status.archiveReason) notes.push(`归档原因：${status.archiveReason}`);
+  }
+  if (status.status === "NAME_CONFLICT") {
+    badges.push({ key: "conflict", label: "名称失效 · 本地可用", tone: "conflict" });
+    if (status.nameConflictReason) notes.push(status.nameConflictReason);
+  }
+  if (status.versionStatus === "WITHDRAWN") {
+    badges.push({ key: "withdrawn", label: "当前版本已撤回", tone: "withdrawn" });
+    if (status.withdrawalReason) notes.push(`撤回原因：${status.withdrawalReason}`);
+    if (status.recommendedVersion) notes.push(`推荐切换至 v${status.recommendedVersion.version}`);
+  }
+  return { badges, note: notes.length > 0 ? notes.join("；") : null };
+}
 
 /**
  * 功能说明：展示当前设备的本地 Skill 和当前用户关联的在线 Skill。
@@ -39,7 +82,8 @@ export function MySkillsPage({
 }) {
   const [domain, setDomain] = useState<Domain>("local");
   const [relation, setRelation] = useState<Relation>("OWNED");
-  const [localSkills, setLocalSkills] = useState<LocalSkillRecord[]>([]);
+  const [localSkills, setLocalSkills] = useState<LocalSkillView[]>([]);
+  const [localRefreshKey, setLocalRefreshKey] = useState(0);
   const [onlineSkills, setOnlineSkills] = useState<SkillSummaryDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -47,14 +91,29 @@ export function MySkillsPage({
   useEffect(() => {
     let active = true;
     setLoading(true);
-    localSkillService.scanSkills().then((items) => {
-      if (active) setLocalSkills(items);
+    setError("");
+    console.info("[KocotreeSkills] 开始扫描本地 Skill 并查询在线状态");
+    localSkillService.scanSkills().then(async (items) => {
+      const views = await Promise.all(items.map(async (record): Promise<LocalSkillView> => {
+        if (!record.skillId) return { record, onlineStatus: null, onlineUnavailable: false };
+        try {
+          const onlineStatus = await skillApi.getInstallationStatus(record.skillId, record.versionId ?? undefined);
+          return { record, onlineStatus, onlineUnavailable: false };
+        } catch (reason) {
+          console.warn("[KocotreeSkills] 本地 Skill 在线状态查询失败", { skillId: record.skillId, reason });
+          return { record, onlineStatus: null, onlineUnavailable: true };
+        }
+      }));
+      if (active) {
+        setLocalSkills(views);
+        console.info("[KocotreeSkills] 本地 Skill 状态加载完成", { count: views.length });
+      }
     }).catch((reason: unknown) => {
       console.error("[KocotreeSkills] 本地 Skill 扫描失败", reason);
       if (active) setError("本地 Skill 暂时无法读取");
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [localRefreshKey]);
 
   useEffect(() => {
     if (domain !== "online" || !currentUser) return;
@@ -87,6 +146,7 @@ export function MySkillsPage({
             ))}
           </div>
         )}
+        {domain === "local" && <Button size="small" loading={loading} onClick={() => setLocalRefreshKey((current) => current + 1)}>重新检查</Button>}
       </section>
 
       {domain === "online" && !currentUser ? (
@@ -102,14 +162,28 @@ export function MySkillsPage({
         <section className="empty-state"><strong>暂时无法加载</strong><span>{error}</span></section>
       ) : domain === "local" ? (
         <section className="my-skills-list">
-          {localSkills.map((skill) => (
-            <article className="my-skill-row" key={skill.id}>
-              <span className="skill-logo skill-logo-green">{skill.skillName.slice(0, 2).toUpperCase()}</span>
-              <div className="my-skill-main"><strong>{skill.displayName}</strong><code>{skill.skillName}</code><small>{skill.installPath}</small></div>
-              <span className={`local-status local-status-${skill.status.toLocaleLowerCase()}`}>{localStatusLabels[skill.status]}</span>
-              <span className="my-skill-version">{skill.version ? `v${skill.version}` : "未关联版本"}</span>
-            </article>
-          ))}
+          {localSkills.map((item) => {
+            const { record } = item;
+            const presentation = getOnlinePresentation(item);
+            return (
+              <article className="my-skill-row" key={record.id}>
+                <span className="skill-logo skill-logo-green">{record.skillName.slice(0, 2).toUpperCase()}</span>
+                <div className="my-skill-main">
+                  <strong>{record.displayName}</strong>
+                  <code>{record.skillName}</code>
+                  <small>{record.installPath}</small>
+                  {presentation.note && <small className="my-skill-warning">{presentation.note}</small>}
+                </div>
+                <div className="my-skill-statuses">
+                  <span className={`local-status local-status-${record.status.toLocaleLowerCase()}`}>{localStatusLabels[record.status]}</span>
+                  {presentation.badges.map((badge) => (
+                    <span className={`online-status online-status-${badge.tone}`} key={badge.key}>{badge.label}</span>
+                  ))}
+                </div>
+                <span className="my-skill-version">{record.version ? `v${record.version}` : "未关联版本"}</span>
+              </article>
+            );
+          })}
         </section>
       ) : (
         <section className="my-skills-list">
