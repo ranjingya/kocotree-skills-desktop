@@ -1,6 +1,7 @@
 :root {
   --koco-primary: #009139;
   --koco-primary-hover: #007f31;
+  --koco-primary-active: #006d2a;
   --koco-primary-soft: #e9f7ee;
   --koco-text: #292b28;
   --koco-muted: #757a75;
@@ -73,7 +74,7 @@
 .ui-select-option small { color: var(--koco-muted); font-size: 11px; }
 .ui-select-option:hover,
 .ui-select-option.active { background: var(--koco-surface-subtle); }
-.ui-select-option.selected { background: var(--koco-primary-soft); color: #006d2a; }
+.ui-select-option.selected { background: var(--koco-primary-soft); color: var(--koco-primary-active); }
 .ui-select-check { color: var(--koco-primary); font-weight: 700; }
 
 .ui-spinner { display: inline-block; width: 18px; height: 18px; flex: none; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; color: var(--koco-primary); animation: ui-spin 700ms linear infinite; }
@@ -88,7 +89,7 @@
 .ui-tabs-list > button.active::after { position: absolute; right: 8px; bottom: -1px; left: 8px; height: 2px; background: var(--koco-primary); content: ""; }
 .ui-tabs-content { min-height: 0; flex: 1; overflow: auto; }
 
-.ui-tag { display: inline-flex; min-height: 23px; align-items: center; padding: 2px 8px; border-radius: 999px; background: var(--koco-primary-soft); color: #087334; font-size: 11px; line-height: 16px; }
+.ui-tag { display: inline-flex; min-height: 23px; align-items: center; padding: 2px 8px; border-radius: 999px; background: var(--koco-primary-soft); color: var(--koco-primary-active); font-size: 11px; line-height: 16px; }
 .ui-tag-small { min-height: 20px; padding: 1px 7px; }
 .ui-tag-red { background: var(--koco-danger-soft); color: #b84f39; }
 
