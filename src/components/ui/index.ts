@@ -9,6 +9,7 @@ export {
   Tabs,
   Tag,
   TextArea,
+  Tooltip,
   Toast,
   ToastViewport,
 } from "./KocotreeUi";

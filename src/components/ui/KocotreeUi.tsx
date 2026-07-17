@@ -4,6 +4,7 @@ import {
   isValidElement,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ButtonHTMLAttributes,
@@ -13,6 +14,7 @@ import {
   type ReactNode,
   type TextareaHTMLAttributes,
 } from "react";
+import { createPortal } from "react-dom";
 
 type ButtonTheme = "solid" | "light" | "borderless";
 type ButtonTone = "primary" | "secondary" | "tertiary" | "danger";
@@ -25,7 +27,117 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
   block?: boolean;
   loading?: boolean;
   icon?: ReactNode;
+  tooltip?: string;
   htmlType?: "button" | "submit" | "reset";
+}
+
+interface TooltipProps {
+  content: string;
+  children: ReactElement<{ "aria-describedby"?: string }>;
+  className?: string;
+  delay?: number;
+  onlyWhenTruncated?: boolean;
+}
+
+/**
+ * 功能说明：为简短说明提供可访问的悬浮提示，并根据视口空间自动选择上下位置。
+ * @param content - Tooltip 展示的纯文本内容。
+ * @param children - 触发 Tooltip 的单个可聚焦或可悬浮元素。
+ * @param className - Tooltip 触发器外层的附加类名。
+ * @param delay - 鼠标悬停后的显示延迟，单位为毫秒。
+ * @param onlyWhenTruncated - 是否仅在子元素文本被截断时展示。
+ * @returns 支持 Hover、Focus 与 Esc 关闭的 Tooltip。
+ */
+export function Tooltip({ content, children, className = "", delay = 350, onlyWhenTruncated = false }: TooltipProps) {
+  const tooltipId = useId();
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const tooltipRef = useRef<HTMLSpanElement>(null);
+  const timerRef = useRef<number | null>(null);
+  const [visible, setVisible] = useState(false);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+
+  function clearTimer(): void {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+
+  function show(immediate: boolean): void {
+    clearTimer();
+    const contentElement = triggerRef.current?.firstElementChild as HTMLElement | null;
+    if (onlyWhenTruncated && contentElement && contentElement.scrollWidth <= contentElement.clientWidth) return;
+    if (immediate) {
+      setVisible(true);
+      return;
+    }
+    timerRef.current = window.setTimeout(() => setVisible(true), delay);
+  }
+
+  function hide(): void {
+    clearTimer();
+    setVisible(false);
+    setPosition(null);
+  }
+
+  useLayoutEffect(() => {
+    if (!visible || !triggerRef.current || !tooltipRef.current) return;
+    const triggerBox = triggerRef.current.getBoundingClientRect();
+    const tooltipBox = tooltipRef.current.getBoundingClientRect();
+    const edge = 8;
+    const gap = 7;
+    let top = triggerBox.top - tooltipBox.height - gap;
+    if (top < edge) top = triggerBox.bottom + gap;
+    const centeredLeft = triggerBox.left + (triggerBox.width - tooltipBox.width) / 2;
+    const left = Math.min(Math.max(centeredLeft, edge), window.innerWidth - tooltipBox.width - edge);
+    setPosition({ left, top });
+  }, [content, visible]);
+
+  useEffect(() => {
+    return () => clearTimer();
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    window.addEventListener("resize", hide);
+    window.addEventListener("scroll", hide, true);
+    return () => {
+      window.removeEventListener("resize", hide);
+      window.removeEventListener("scroll", hide, true);
+    };
+  }, [visible]);
+
+  const describedBy = [children.props["aria-describedby"], visible ? tooltipId : ""].filter(Boolean).join(" ") || undefined;
+  const trigger = cloneElement(children, { "aria-describedby": describedBy });
+  return (
+    <>
+      <span
+        className={`ui-tooltip-trigger ${className}`}
+        ref={triggerRef}
+        onMouseEnter={() => show(false)}
+        onMouseLeave={hide}
+        onFocusCapture={() => show(true)}
+        onBlurCapture={hide}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") hide();
+        }}
+      >
+        {trigger}
+      </span>
+      {visible && createPortal(
+        <span
+          className="ui-tooltip"
+          id={tooltipId}
+          ref={tooltipRef}
+          role="tooltip"
+          style={{ left: position?.left ?? -9999, top: position?.top ?? -9999 }}
+        >
+          {content}
+        </span>,
+        document.body,
+      )}
+    </>
+  );
 }
 
 /**
@@ -33,14 +145,15 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
  * @param props - 按钮外观、尺寸、状态与原生按钮属性。
  * @returns 统一样式的按钮元素。
  */
-export function Button({ type = "secondary", theme = type === "primary" ? "solid" : "light", size = "default", block = false, loading = false, icon, disabled, htmlType = "button", className = "", children, ...props }: ButtonProps) {
+export function Button({ type = "secondary", theme = type === "primary" ? "solid" : "light", size = "default", block = false, loading = false, icon, tooltip, disabled, htmlType = "button", className = "", children, ...props }: ButtonProps) {
   const classes = ["ui-button", `ui-button-${type}`, `ui-button-${theme}`, size === "small" ? "ui-button-small" : "", block ? "ui-button-block" : "", className].filter(Boolean).join(" ");
-  return (
+  const button = (
     <button {...props} className={classes} type={htmlType} disabled={disabled || loading} aria-busy={loading || undefined}>
       <span className="ui-button-content">{icon}{children}</span>
       {loading && <span className="ui-button-loading" aria-hidden="true"><Spinner size="small" /></span>}
     </button>
   );
+  return tooltip ? <Tooltip content={tooltip}>{button}</Tooltip> : button;
 }
 
 export interface ModalProps {
@@ -116,7 +229,7 @@ export function Modal({ visible, title, width, onCancel, footer, className = "",
         <div ref={dialogRef} className="ui-modal" style={style} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
           <header className="ui-modal-header">
             <h2 id={titleId}>{title}</h2>
-            <button className="ui-modal-close" type="button" aria-label="关闭弹窗" onClick={onCancel}>×</button>
+            <Tooltip content="关闭弹窗"><button className="ui-modal-close" type="button" aria-label="关闭弹窗" onClick={onCancel}>×</button></Tooltip>
           </header>
           <div className="ui-modal-body">{children}</div>
           {footer != null && <footer className="ui-modal-footer">{footer}</footer>}
@@ -374,7 +487,7 @@ export function ToastViewport() {
     <div className="ui-toast-viewport" aria-live="polite" aria-atomic="false">
       {messages.map((message) => (
         <div className={`ui-toast ui-toast-${message.tone}`} role={message.tone === "error" ? "alert" : "status"} key={message.id}>
-          <span className="ui-toast-mark" aria-hidden="true" /><span>{message.text}</span><button type="button" aria-label="关闭提示" onClick={() => dismiss(message.id)}>×</button>
+          <span className="ui-toast-mark" aria-hidden="true" /><span>{message.text}</span><Tooltip content="关闭提示"><button type="button" aria-label="关闭提示" onClick={() => dismiss(message.id)}>×</button></Tooltip>
         </div>
       ))}
     </div>

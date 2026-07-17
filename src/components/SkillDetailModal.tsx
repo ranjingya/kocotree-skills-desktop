@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Dropdown, Modal, Select, Spin, TabPane, Tabs, Tag, Toast } from "./ui";
+import { Button, Dropdown, Modal, Select, Spin, TabPane, Tabs, Tag, Tooltip, Toast } from "./ui";
 import {
   skillApi,
   SkillApiError,
@@ -302,7 +302,7 @@ export function SkillDetailModal({
                     </Dropdown.Menu>
                   )}
                 >
-                  <Button className="detail-more-trigger" aria-label="更多管理操作" icon={<AppIcon name="more" size={18} />} />
+                  <Button className="detail-more-trigger" aria-label="更多管理操作" tooltip="更多管理操作" icon={<AppIcon name="more" size={18} />} />
                 </Dropdown>
               )}
             </>
@@ -359,18 +359,23 @@ export function SkillDetailModal({
                 {sortedCollaborators.length > 0 && <span className="maintainer-divider" aria-hidden="true" />}
                 <div className="collaborator-list" aria-label={`协作者 ${sortedCollaborators.length} 人`}>
                   {sortedCollaborators.slice(0, 5).map((user) => (
-                    <span
-                      className={user.status === "DISABLED" ? "collaborator-avatar disabled" : "collaborator-avatar"}
+                    <Tooltip
+                      content={`${user.name} · ${user.departmentPath.join(" / ") || "部门信息暂无"}${user.status === "DISABLED" ? " · 账号已停用" : ""}`}
                       key={user.id}
-                      title={`${user.name} · ${user.departmentPath.join(" / ") || "部门信息暂无"}${user.status === "DISABLED" ? " · 账号已停用" : ""}`}
                     >
-                      {user.name.slice(0, 1)}
-                    </span>
+                      <span
+                        className={user.status === "DISABLED" ? "collaborator-avatar disabled" : "collaborator-avatar"}
+                        role="img"
+                        aria-label={`协作者：${user.name}`}
+                      >
+                        {user.name.slice(0, 1)}
+                      </span>
+                    </Tooltip>
                   ))}
                   {sortedCollaborators.length > 5 && (
-                    <span className="collaborator-more" title={`另外 ${sortedCollaborators.length - 5} 位协作者`}>
-                      +{sortedCollaborators.length - 5}
-                    </span>
+                    <Tooltip content={`另外 ${sortedCollaborators.length - 5} 位协作者`}>
+                      <span className="collaborator-more">+{sortedCollaborators.length - 5}</span>
+                    </Tooltip>
                   )}
                   {sortedCollaborators.length === 0 && <small>暂无协作者</small>}
                 </div>

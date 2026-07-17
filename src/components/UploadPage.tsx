@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Button } from "./ui";
+import { Button, Tooltip } from "./ui";
 import {
   parseSkillPackage,
   skillApi,
@@ -287,14 +287,16 @@ export function UploadPage({
                         placeholder="输入 Tag，多个用逗号分隔"
                       />
                     ) : (
-                      <button
-                        className="tag-create-button"
-                        type="button"
-                        aria-label="创建新 Tag"
-                        onClick={() => setNewTagInputVisible(true)}
-                      >
-                        <AppIcon name="plus" size={15} />
-                      </button>
+                      <Tooltip content="创建新 Tag">
+                        <button
+                          className="tag-create-button"
+                          type="button"
+                          aria-label="创建新 Tag"
+                          onClick={() => setNewTagInputVisible(true)}
+                        >
+                          <AppIcon name="plus" size={15} />
+                        </button>
+                      </Tooltip>
                     )}
                   </div>
                 </fieldset>

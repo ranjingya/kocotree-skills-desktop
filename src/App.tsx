@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Dropdown, Modal, Toast, ToastViewport } from "./components/ui";
+import { Button, Dropdown, Modal, Tooltip, Toast, ToastViewport } from "./components/ui";
 import {
   skillApi,
   localSkillService,
@@ -80,8 +80,12 @@ function SkillCard({
             {getSkillShortCode(skill)}
           </span>
           <span className="skill-card-copy">
-            <strong className="skill-display-name" title={skill.displayName}>{skill.displayName}</strong>
-            <code className="skill-internal-name" title={skill.skillName}>{skill.skillName}</code>
+            <Tooltip className="skill-text-tooltip" content={skill.displayName} onlyWhenTruncated>
+              <strong className="skill-display-name">{skill.displayName}</strong>
+            </Tooltip>
+            <Tooltip className="skill-text-tooltip" content={skill.skillName} onlyWhenTruncated>
+              <code className="skill-internal-name">{skill.skillName}</code>
+            </Tooltip>
             {skill.tags.length > 0 && (
               <span className="skill-card-tags" aria-label={`标签：${skill.tags.map((tag) => tag.name).join("、")}`}>
                 {skill.tags.slice(0, 2).map((tag) => <span key={tag.id}>{tag.name}</span>)}
@@ -94,27 +98,25 @@ function SkillCard({
       </div>
 
       <div className="skill-card-meta">
-        <span
-          className="skill-card-owner-avatar"
-          role="img"
-          aria-label={`Owner：${skill.owner.name}`}
-          title={`Owner：${skill.owner.name}`}
-        >
-          {skill.owner.avatarUrl ? <img src={skill.owner.avatarUrl} alt="" /> : skill.owner.name.slice(0, 1)}
-        </span>
+        <Tooltip content={`Owner：${skill.owner.name}`}>
+          <span className="skill-card-owner-avatar" role="img" aria-label={`Owner：${skill.owner.name}`}>
+            {skill.owner.avatarUrl ? <img src={skill.owner.avatarUrl} alt="" /> : skill.owner.name.slice(0, 1)}
+          </span>
+        </Tooltip>
         <span className="download-count">
           <AppIcon name="download" size={14} />
           {skill.installCount.toLocaleString("zh-CN")}
         </span>
-        <button
-          className={installed ? "install-button installed" : "install-button"}
-          type="button"
-          onClick={(event) => { event.stopPropagation(); onOpen(skill); }}
-          aria-label={installed ? `${skill.displayName} 已安装，查看详情` : `查看并安装 ${skill.displayName}`}
-          title={installed ? "已安装，查看详情" : "查看并安装"}
-        >
-          <AppIcon name={installed ? "check" : "plus"} size={17} />
-        </button>
+        <Tooltip className="skill-card-action-tooltip" content={installed ? "已安装，查看详情" : "查看并安装"}>
+          <button
+            className={installed ? "install-button installed" : "install-button"}
+            type="button"
+            onClick={(event) => { event.stopPropagation(); onOpen(skill); }}
+            aria-label={installed ? `${skill.displayName} 已安装，查看详情` : `查看并安装 ${skill.displayName}`}
+          >
+            <AppIcon name={installed ? "check" : "plus"} size={17} />
+          </button>
+        </Tooltip>
       </div>
     </article>
   );
