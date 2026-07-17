@@ -1951,6 +1951,7 @@ textarea:focus-visible,
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #fff;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 
 button.my-skill-card {
@@ -1960,9 +1961,10 @@ button.my-skill-card {
 }
 
 button.my-skill-card:hover {
+  border-color: #cbd0d4;
+  background: #fff;
+  box-shadow: 0 5px 16px rgba(36, 43, 50, 0.06);
   transform: translateY(-1px);
-  border-color: var(--accent-border);
-  background: var(--accent-surface);
 }
 
 .my-skill-card-heading {
