@@ -1796,7 +1796,7 @@ textarea:focus-visible,
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
-  padding: 7px;
+  padding: 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
 }
@@ -1806,16 +1806,19 @@ textarea:focus-visible,
   display: flex;
   align-items: center;
   gap: 4px;
+  padding: 3px;
+  border: 1px solid transparent;
+  border-radius: 10px;
 }
 
 .domain-tabs button,
 .relation-tabs button {
   height: 38px;
-  padding: 0 16px;
+  padding: 0 14px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 7px;
   background: transparent;
-  color: var(--muted);
+  color: #696d77;
   cursor: pointer;
   transition: background-color 140ms ease, color 140ms ease;
 }
@@ -1823,13 +1826,13 @@ textarea:focus-visible,
 .domain-tabs button:hover,
 .relation-tabs button:hover {
   background: #f1f2f3;
-  color: #27292f;
+  color: #2e3036;
 }
 
 .domain-tabs button.active,
 .relation-tabs button.active {
-  background: #eceef1;
-  color: #27292f;
+  background: #e9e9eb;
+  color: #2e3036;
   font-weight: 600;
 }
 
