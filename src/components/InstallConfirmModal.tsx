@@ -7,6 +7,7 @@ import type { SkillSummaryDto, SkillVersionDto } from "../api";
  * @param version - 准备安装的版本。
  * @param warnings - 用户确认前必须看到的风险说明。
  * @param forceRequired - 是否必须使用强制替换操作。
+ * @param promptTitle - 当前异常类型对应的确认标题。
  * @param loading - 当前安装操作是否正在执行。
  * @param onCancel - 取消安装的回调。
  * @param onConfirm - 确认安装的回调，参数表示是否强制替换。
@@ -17,6 +18,7 @@ export function InstallConfirmModal({
   version,
   warnings,
   forceRequired,
+  promptTitle,
   loading,
   onCancel,
   onConfirm,
@@ -25,6 +27,7 @@ export function InstallConfirmModal({
   version: SkillVersionDto | null;
   warnings: string[];
   forceRequired: boolean;
+  promptTitle?: string;
   loading: boolean;
   onCancel: () => void;
   onConfirm: (force: boolean) => void;
@@ -32,7 +35,7 @@ export function InstallConfirmModal({
   return (
     <Modal
       className="install-confirm-modal"
-      title={forceRequired ? "发现本地同名 Skill" : "确认安装"}
+      title={promptTitle ?? (forceRequired ? "发现本地同名 Skill" : "确认安装")}
       visible={Boolean(skill && version)}
       width={520}
       centered

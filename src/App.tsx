@@ -15,6 +15,7 @@ import { UploadPage } from "./components/UploadPage";
 import { MySkillsPage } from "./components/MySkillsPage";
 import { NotificationPanel } from "./components/NotificationPanel";
 import { InstallConfirmModal } from "./components/InstallConfirmModal";
+import { InstallFeedbackModal, type InstallFeedbackState } from "./components/InstallFeedbackModal";
 import "./App.css";
 
 type PageKey = "browse" | "my-skills" | "upload";
@@ -25,6 +26,7 @@ interface InstallPromptState {
   version: SkillVersionDto;
   warnings: string[];
   forceRequired: boolean;
+  promptTitle?: string;
 }
 
 const logoTones = ["dark", "blue", "orange", "violet", "green"] as const;
@@ -258,6 +260,7 @@ function App() {
     () => new Set(["0c9c2f8d-3e84-4c0c-8a15-d41d87fd1001", "0c9c2f8d-3e84-4c0c-8a15-d41d87fd1002"]),
   );
   const [installPrompt, setInstallPrompt] = useState<InstallPromptState | null>(null);
+  const [installFeedback, setInstallFeedback] = useState<InstallFeedbackState | null>(null);
   const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
@@ -349,7 +352,7 @@ function App() {
   function prepareInstall(skill: SkillSummaryDto, version: SkillVersionDto): void {
     const warnings: string[] = [];
     if (version.id !== skill.currentVersion.id) {
-      warnings.push(`你正在安装历史版本 v${version.version}，这可能会覆盖本地较新的版本。`);
+      warnings.push(`你正在从最新版 v${skill.currentVersion.version} 降级到历史版本 v${version.version}。确认后会先备份本地目录，再安装目标版本。`);
     }
     if (skill.derivedFrom) {
       warnings.push(`该 Skill 派生自 ${skill.derivedFrom.skillName}，建议只保留用途相近的一个 Skill。`);
@@ -395,19 +398,52 @@ function App() {
       setInstalledSkillIds((currentIds) => new Set(currentIds).add(skill.id));
       setBrowseRefreshKey((current) => current + 1);
       setInstallPrompt(null);
-      Toast.success(localResult.backupPath ? "已创建备份并完成模拟替换" : "模拟安装完成，正式版将写入 ~/.agents/skills");
+      if (localResult.notices.length > 0) {
+        setInstallFeedback({
+          tone: "warning",
+          title: "Skill 已安装，Claude 尚未接入",
+          summary: "通用 Skill 目录安装成功，Codex 可以继续使用。",
+          details: localResult.notices,
+        });
+      } else {
+        Toast.success(localResult.backupPath ? "已创建备份并完成模拟替换" : "模拟安装完成，正式版将写入 ~/.agents/skills");
+      }
     } catch (reason) {
       console.error("[KocotreeSkills] Skill 模拟安装失败", reason);
       if (reason instanceof SkillApiError && reason.code === "LOCAL_SKILL_CONFLICT") {
+        const localStatus = typeof reason.details?.localSkill === "object" && reason.details.localSkill !== null
+          ? (reason.details.localSkill as { status?: string }).status
+          : undefined;
+        const locallyModified = localStatus === "PLATFORM_MODIFIED";
         setInstallPrompt({
           skill,
           version,
           forceRequired: true,
-          warnings: ["本地目录中已经存在同名 Skill。它可能是手动安装或已经被修改，直接覆盖会丢失现有内容。"],
+          promptTitle: locallyModified ? "检测到本地内容已修改" : "发现本地同名 Skill",
+          warnings: [locallyModified
+            ? "本地目录包含平台安装后修改的内容。继续操作会先备份当前目录，再用平台版本替换。"
+            : "本地目录中已经存在同名的未知来源 Skill。继续操作会先备份当前目录，再安装平台版本。"],
         });
         return;
       }
-      Toast.error(reason instanceof SkillApiError ? reason.message : "安装失败，请稍后重试");
+      setInstallPrompt(null);
+      if (reason instanceof SkillApiError && reason.code === "PACKAGE_HASH_MISMATCH") {
+        setInstallFeedback({
+          tone: "error",
+          title: "安装包校验失败",
+          summary: "安装已经中止，本地 Skill 未发生变化。",
+          details: [reason.message, "请稍后重新下载；重复失败时联系平台管理员检查版本文件。"],
+        });
+      } else if (reason instanceof SkillApiError && reason.code === "INSTALL_ROLLBACK_COMPLETED") {
+        setInstallFeedback({
+          tone: "error",
+          title: "安装失败，已自动恢复",
+          summary: "新版本没有生效，原 Skill 已恢复到安装前状态。",
+          details: [reason.message, "本次失败不会上报安装次数，可以排查原因后重新尝试。"],
+        });
+      } else {
+        Toast.error(reason instanceof SkillApiError ? reason.message : "安装失败，请稍后重试");
+      }
     } finally {
       setInstalling(false);
     }
@@ -563,12 +599,15 @@ function App() {
         version={installPrompt?.version ?? null}
         warnings={installPrompt?.warnings ?? []}
         forceRequired={installPrompt?.forceRequired ?? false}
+        promptTitle={installPrompt?.promptTitle}
         loading={installing}
         onCancel={() => setInstallPrompt(null)}
         onConfirm={(force) => {
           if (installPrompt) void installSkillVersion(installPrompt.skill, installPrompt.version, force);
         }}
       />
+
+      <InstallFeedbackModal feedback={installFeedback} onClose={() => setInstallFeedback(null)} />
 
       <Modal
         className="login-modal"

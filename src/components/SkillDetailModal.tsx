@@ -327,6 +327,16 @@ export function SkillDetailModal({
           <div className="detail-tags">
             {detail.tags.map((tag) => <Tag color="green" key={tag.id}>{tag.name}</Tag>)}
           </div>
+          {detail.status !== "ACTIVE" && (
+            <div className="detail-availability-notice" role="status">
+              <strong>{detail.status === "ARCHIVED" ? "该 Skill 已归档" : "该 Skill 暂不可安装"}</strong>
+              <span>
+                {detail.status === "ARCHIVED"
+                  ? detail.archiveReason ?? "归档状态下不提供版本下载和安装。"
+                  : detail.nameConflictReason ?? "名称存在冲突，请使用新名称创建派生 Skill。"}
+              </span>
+            </div>
+          )}
           <div className="detail-stats">
             <div><span>最新版本</span><strong>v{detail.currentVersion.version}</strong></div>
             <div><span>安装次数</span><strong>{detail.installCount.toLocaleString("zh-CN")}</strong></div>

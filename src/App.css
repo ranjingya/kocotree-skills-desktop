@@ -1250,6 +1250,25 @@ textarea:focus-visible,
   gap: 6px;
 }
 
+.detail-availability-notice {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid #ecdca8;
+  border-radius: 8px;
+  background: #fffbed;
+  color: #6f5a22;
+}
+
+.detail-availability-notice strong {
+  font-size: 12px;
+}
+
+.detail-availability-notice span {
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .detail-stats {
   display: grid;
   grid-template-columns: minmax(0, 0.85fr) minmax(0, 0.85fr) minmax(0, 1.3fr);
@@ -1797,6 +1816,64 @@ textarea:focus-visible,
 
 .install-confirm-content > small {
   color: var(--muted);
+}
+
+.install-feedback-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.install-feedback-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid #ecdca8;
+  border-radius: 10px;
+  background: #fffbed;
+  color: #6f5a22;
+}
+
+.install-feedback-content.error {
+  border-color: #efc7c3;
+  background: #fff6f5;
+  color: #9f4038;
+}
+
+.install-feedback-mark {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: #eddb85;
+  color: #51400f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.install-feedback-content.error .install-feedback-mark {
+  background: #e16b51;
+  color: #fff;
+}
+
+.install-feedback-content > div {
+  display: grid;
+  gap: 7px;
+}
+
+.install-feedback-content strong {
+  font-size: 13px;
+}
+
+.install-feedback-content ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 17px;
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .my-skills-toolbar {
