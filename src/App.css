@@ -1094,6 +1094,33 @@ textarea:focus-visible,
   height: 32px;
 }
 
+.detail-more-menu {
+  width: auto;
+}
+
+.detail-more-trigger {
+  width: 38px;
+  min-width: 38px;
+  padding: 0;
+}
+
+.detail-more-dropdown {
+  right: 0;
+  left: auto;
+  width: 180px;
+}
+
+.detail-more-dropdown .ui-dropdown-menu {
+  border-top: 0;
+}
+
+.detail-more-dropdown .ui-dropdown-item.danger {
+  margin-top: 5px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 7px 7px;
+  padding-top: 10px;
+}
+
 .detail-secondary-action {
   border: 1px solid #d9dce1;
   background: #fff;

@@ -264,6 +264,7 @@ interface DropdownProps {
   render: ReactNode;
   children: ReactElement<{ onClick?: () => void; "aria-expanded"?: boolean }>;
   contentClassName?: string;
+  className?: string;
   getPopupContainer?: () => HTMLElement;
   position?: "top";
   trigger?: "click";
@@ -277,7 +278,7 @@ function DropdownItem({ type, icon, className = "", children, ...props }: Dropdo
  * @param props - 菜单内容、触发按钮和展示类名。
  * @returns 支持点击外部与 Esc 关闭的下拉菜单。
  */
-export function Dropdown({ render, children, contentClassName = "" }: DropdownProps) {
+export function Dropdown({ render, children, contentClassName = "", className = "" }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -292,7 +293,13 @@ export function Dropdown({ render, children, contentClassName = "" }: DropdownPr
     };
   }, [open]);
   return (
-    <div className="ui-dropdown" ref={rootRef}>
+    <div
+      className={`ui-dropdown ${className}`}
+      ref={rootRef}
+      onClickCapture={(event) => {
+        if ((event.target as HTMLElement).closest('[role="menuitem"]')) setOpen(false);
+      }}
+    >
       {open && <div className={`ui-dropdown-popup ${contentClassName}`}>{render}</div>}
       {cloneElement(children, { "aria-expanded": open, onClick: () => { children.props.onClick?.(); setOpen((current) => !current); } })}
     </div>

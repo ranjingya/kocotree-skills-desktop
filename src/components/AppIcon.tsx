@@ -12,6 +12,7 @@ export type AppIconName =
   | "plus"
   | "folder"
   | "file"
+  | "more"
   | "logout";
 
 const iconPaths: Record<AppIconName, React.ReactNode> = {
@@ -28,6 +29,7 @@ const iconPaths: Record<AppIconName, React.ReactNode> = {
   plus: <><path d="M12 5v14M5 12h14" /></>,
   folder: <><path d="M3.5 7.5h6l2-2h9v13h-17z" /></>,
   file: <><path d="M6.5 3.5h7l4 4v13h-11z" /><path d="M13.5 3.5v4h4" /></>,
+  more: <><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" /></>,
   logout: <><path d="M10 5H5v14h5" /><path d="M13 8l4 4-4 4M8 12h9" /></>,
 };
 

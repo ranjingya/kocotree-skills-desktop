@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Modal, Select, Spin, TabPane, Tabs, Tag, Toast } from "./ui";
+import { Button, Dropdown, Modal, Select, Spin, TabPane, Tabs, Tag, Toast } from "./ui";
 import {
   skillApi,
   SkillApiError,
@@ -260,36 +260,46 @@ export function SkillDetailModal({
         <div className="detail-footer">
           {detail ? (
             <>
-              <Button
-                className="detail-secondary-action"
-                theme="light"
-                type="tertiary"
-                disabled={detail.status !== "ACTIVE"}
-                onClick={() => onUploadVersion(detail)}
-              >
-                上传新版本
-              </Button>
-              {canManageSkill && detail.status === "ACTIVE" && (
-                <Button theme="borderless" type="danger" onClick={() => { setManagementReason(""); setManagementAction({ type: "archive" }); }}>归档</Button>
-              )}
-              {canManageSkill && detail.status === "ARCHIVED" && (
-                <Button loading={managementLoading} onClick={() => void handleRestore()}>恢复</Button>
+              {detail.status === "ACTIVE" && (
+                <Button className="detail-secondary-action" theme="light" type="tertiary" onClick={() => onUploadVersion(detail)}>
+                  上传新版本
+                </Button>
               )}
               {canManageVersion && (
-                <Button theme="borderless" onClick={() => setMetadataVisible(true)}>编辑信息</Button>
+                <Dropdown
+                  className="detail-more-menu"
+                  contentClassName="detail-more-dropdown"
+                  position="top"
+                  trigger="click"
+                  render={(
+                    <Dropdown.Menu>
+                      <Dropdown.Item onClick={() => setMetadataVisible(true)}>编辑展示信息</Dropdown.Item>
+                      {canManageSkill && detail.collaborators.some((user) => user.status === "ACTIVE") && (
+                        <Dropdown.Item onClick={() => setOwnershipVisible(true)}>转移所有权</Dropdown.Item>
+                      )}
+                      {canManageSkill && detail.status === "ACTIVE" && (
+                        <Dropdown.Item type="danger" onClick={() => { setManagementReason(""); setManagementAction({ type: "archive" }); }}>归档 Skill</Dropdown.Item>
+                      )}
+                    </Dropdown.Menu>
+                  )}
+                >
+                  <Button className="detail-more-trigger" aria-label="更多管理操作" icon={<AppIcon name="more" size={18} />} />
+                </Dropdown>
               )}
-              {canManageSkill && detail.collaborators.some((user) => user.status === "ACTIVE") && (
-                <Button theme="borderless" onClick={() => setOwnershipVisible(true)}>转移所有权</Button>
+              {detail.status === "ACTIVE" && (
+                <Button
+                  theme="solid"
+                  type="primary"
+                  disabled={detail.currentVersion.status !== "PUBLISHED"}
+                  icon={installedSkillIds.has(detail.id) ? undefined : <AppIcon name="download" size={16} />}
+                  onClick={() => onInstall(detail, detail.currentVersion)}
+                >
+                  {installedSkillIds.has(detail.id) ? "重新安装最新版" : "安装最新版"}
+                </Button>
               )}
-              <Button
-                theme="solid"
-                type="primary"
-                disabled={detail.status !== "ACTIVE" || detail.currentVersion.status !== "PUBLISHED"}
-                icon={installedSkillIds.has(detail.id) ? undefined : <AppIcon name="download" size={16} />}
-                onClick={() => onInstall(detail, detail.currentVersion)}
-              >
-                {installedSkillIds.has(detail.id) ? "重新安装最新版" : "安装最新版"}
-              </Button>
+              {canManageSkill && detail.status === "ARCHIVED" && (
+                <Button theme="solid" type="primary" loading={managementLoading} onClick={() => void handleRestore()}>恢复 Skill</Button>
+              )}
             </>
           ) : <span className="detail-footer-placeholder" aria-hidden="true" />}
         </div>
