@@ -17,7 +17,6 @@
   --border: #dfe3df;
   --muted: #757a75;
   --sidebar: #f7f8f6;
-  --page-controls-height: 138px;
 }
 
 * {
@@ -436,7 +435,6 @@ textarea:focus-visible,
 }
 
 .filter-panel {
-  min-height: var(--page-controls-height);
   flex: none;
   padding: 16px;
   border: 1px solid var(--border);
@@ -493,7 +491,7 @@ textarea:focus-visible,
 
 .search-box {
   display: flex;
-  height: 46px;
+  height: 38px;
   min-width: 200px;
   flex: 1;
   align-items: center;
@@ -1793,12 +1791,12 @@ textarea:focus-visible,
 
 .my-skills-toolbar {
   display: flex;
-  min-height: var(--page-controls-height);
-  align-items: flex-start;
+  min-height: 56px;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
-  padding: 16px;
+  padding: 7px;
   border: 1px solid var(--border);
   border-radius: 12px;
 }
@@ -1812,7 +1810,7 @@ textarea:focus-visible,
 
 .domain-tabs button,
 .relation-tabs button {
-  height: 36px;
+  height: 38px;
   padding: 0 16px;
   border: 0;
   border-radius: 8px;
@@ -1922,10 +1920,6 @@ button.my-skill-row:hover {
 }
 
 @media (max-width: 1100px) {
-  :root {
-    --page-controls-height: 194px;
-  }
-
   .skill-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1936,9 +1930,9 @@ button.my-skill-row:hover {
   }
 
   .search-box {
-    height: 46px;
-    min-height: 46px;
-    flex: 0 0 46px;
+    height: 38px;
+    min-height: 38px;
+    flex: 0 0 38px;
   }
 }
 
