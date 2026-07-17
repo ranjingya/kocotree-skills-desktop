@@ -37,21 +37,19 @@ function getSkillShortCode(skill: SkillSummaryDto): string {
 }
 
 /**
- * 功能说明：渲染单个 Skill 卡片并提供详情与安装入口。
+ * 功能说明：渲染单个 Skill 卡片，并通过卡片操作进入详情确认安装。
  * @param skill - 当前卡片展示的技能信息。
  * @param installed - 当前技能是否已安装。
- * @param onInstall - 用户点击安装按钮时调用的回调。
+ * @param onOpen - 用户打开详情时调用的回调。
  * @returns Skill 卡片的 React 元素。
  */
 function SkillCard({
   skill,
   installed,
-  onInstall,
   onOpen,
 }: {
   skill: SkillSummaryDto;
   installed: boolean;
-  onInstall: (skill: SkillSummaryDto) => void;
   onOpen: (skill: SkillSummaryDto) => void;
 }) {
   const tone = logoTones[skill.skillName.length % logoTones.length];
@@ -86,8 +84,9 @@ function SkillCard({
         <button
           className={installed ? "install-button installed" : "install-button"}
           type="button"
-          onClick={(event) => { event.stopPropagation(); onInstall(skill); }}
-          aria-label={installed ? `${skill.displayName} 已安装` : `安装 ${skill.displayName}`}
+          onClick={(event) => { event.stopPropagation(); onOpen(skill); }}
+          aria-label={installed ? `${skill.displayName} 已安装，查看详情` : `查看并安装 ${skill.displayName}`}
+          title={installed ? "已安装，查看详情" : "查看并安装"}
         >
           <AppIcon name={installed ? "check" : "plus"} size={17} />
         </button>
@@ -99,17 +98,16 @@ function SkillCard({
 /**
  * 功能说明：渲染 Skill 浏览页面，支持排序、搜索、来源筛选和安装状态演示。
  * @param installedSkillIds - 已安装 Skill 的编号集合。
- * @param onInstall - 用户安装 Skill 时调用的回调。
+ * @param onOpen - 用户打开 Skill 详情时调用的回调。
+ * @param refreshKey - 触发列表重新加载的刷新编号。
  * @returns Skill 浏览页面的 React 元素。
  */
 function BrowsePage({
   installedSkillIds,
-  onInstall,
   onOpen,
   refreshKey,
 }: {
   installedSkillIds: Set<string>;
-  onInstall: (skill: SkillSummaryDto) => void;
   onOpen: (skill: SkillSummaryDto) => void;
   refreshKey: number;
 }) {
@@ -226,7 +224,6 @@ function BrowsePage({
               key={skill.id}
               skill={skill}
               installed={installedSkillIds.has(skill.id)}
-              onInstall={onInstall}
               onOpen={onOpen}
             />
           ))}
@@ -347,17 +344,6 @@ function App() {
       console.error("[KocotreeSkills] 退出登录失败", reason);
       Toast.error("退出失败，请稍后重试");
     }
-  }
-
-  /**
-   * 功能说明：切换指定 Skill 的本地安装演示状态。
-   * @param skill - 用户点击安装按钮的 Skill。
-   * @returns 无返回值。
-   */
-  function handleInstall(skill: SkillSummaryDto): void {
-    requireAuth(() => {
-      prepareInstall(skill, skill.currentVersion);
-    });
   }
 
   function prepareInstall(skill: SkillSummaryDto, version: SkillVersionDto): void {
@@ -539,7 +525,6 @@ function App() {
         {activePage === "browse" ? (
           <BrowsePage
             installedSkillIds={installedSkillIds}
-            onInstall={handleInstall}
             onOpen={handleOpenSkill}
             refreshKey={browseRefreshKey}
           />
