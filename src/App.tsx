@@ -43,20 +43,30 @@ function getSkillShortCode(skill: SkillSummaryDto): string {
  * @param skill - 当前卡片展示的技能信息。
  * @param installed - 当前技能是否已安装。
  * @param onOpen - 用户打开详情时调用的回调。
+ * @param highlighted - 当前卡片是否作为派生来源被定位高亮。
+ * @param cardRef - 高亮卡片的元素引用回调。
  * @returns Skill 卡片的 React 元素。
  */
 function SkillCard({
   skill,
   installed,
   onOpen,
+  highlighted,
+  cardRef,
 }: {
   skill: SkillSummaryDto;
   installed: boolean;
   onOpen: (skill: SkillSummaryDto) => void;
+  highlighted: boolean;
+  cardRef?: (node: HTMLElement | null) => void;
 }) {
   const tone = logoTones[skill.skillName.length % logoTones.length];
   return (
-    <article className="skill-card" onClick={() => onOpen(skill)}>
+    <article
+      className={highlighted ? "skill-card skill-card-highlighted" : "skill-card"}
+      ref={cardRef}
+      onClick={() => onOpen(skill)}
+    >
       <div className="skill-card-topline">
         <button
           className="skill-title-group card-title-button"
@@ -102,16 +112,22 @@ function SkillCard({
  * @param installedSkillIds - 已安装 Skill 的编号集合。
  * @param onOpen - 用户打开 Skill 详情时调用的回调。
  * @param refreshKey - 触发列表重新加载的刷新编号。
+ * @param highlightedSkillId - 需要定位并高亮的来源 Skill 编号。
+ * @param onHighlightComplete - 来源卡片高亮结束后的回调。
  * @returns Skill 浏览页面的 React 元素。
  */
 function BrowsePage({
   installedSkillIds,
   onOpen,
   refreshKey,
+  highlightedSkillId,
+  onHighlightComplete,
 }: {
   installedSkillIds: Set<string>;
   onOpen: (skill: SkillSummaryDto) => void;
   refreshKey: number;
+  highlightedSkillId: string | null;
+  onHighlightComplete: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [tagId, setTagId] = useState("all");
@@ -120,6 +136,20 @@ function BrowsePage({
   const [tags, setTags] = useState<TagDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const highlightedCardRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!highlightedSkillId) return;
+    setQuery("");
+    setTagId("all");
+  }, [highlightedSkillId]);
+
+  useEffect(() => {
+    if (!highlightedSkillId || loading || !skills.some((skill) => skill.id === highlightedSkillId)) return;
+    highlightedCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timer = window.setTimeout(onHighlightComplete, 2200);
+    return () => window.clearTimeout(timer);
+  }, [highlightedSkillId, loading, onHighlightComplete, skills]);
 
   useEffect(() => {
     let active = true;
@@ -227,6 +257,8 @@ function BrowsePage({
               skill={skill}
               installed={installedSkillIds.has(skill.id)}
               onOpen={onOpen}
+              highlighted={skill.id === highlightedSkillId}
+              cardRef={skill.id === highlightedSkillId ? (node) => { highlightedCardRef.current = node; } : undefined}
             />
           ))}
         </section>
@@ -248,6 +280,7 @@ function BrowsePage({
 function App() {
   const [activePage, setActivePage] = useState<PageKey>("browse");
   const [selectedSkill, setSelectedSkill] = useState<SkillSummaryDto | null>(null);
+  const [highlightedBrowseSkillId, setHighlightedBrowseSkillId] = useState<string | null>(null);
   const [uploadTargetSkill, setUploadTargetSkill] = useState<SkillSummaryDto | null>(null);
   const [browseRefreshKey, setBrowseRefreshKey] = useState(0);
   const [currentUser, setCurrentUser] = useState<UserDto | null>(null);
@@ -370,6 +403,18 @@ function App() {
   }
 
   /**
+   * 功能说明：从派生 Skill 详情返回浏览页，并定位来源 Skill 卡片。
+   * @param skillId - 需要在浏览列表中定位并高亮的来源 Skill 编号。
+   * @returns 无返回值。
+   */
+  function handleOpenDerivedSource(skillId: string): void {
+    console.info("[KocotreeSkills] 准备定位派生来源 Skill", { skillId });
+    setSelectedSkill(null);
+    setHighlightedBrowseSkillId(skillId);
+    setActivePage("browse");
+  }
+
+  /**
    * 功能说明：通过模拟下载凭证完成指定版本的安装与幂等上报。
    * @param skill - 需要安装的 Skill。
    * @param versionId - 需要安装的版本 UUID。
@@ -476,6 +521,10 @@ function App() {
     setUnreadCount(count);
   }, []);
 
+  const handleBrowseHighlightComplete = useCallback(() => {
+    setHighlightedBrowseSkillId(null);
+  }, []);
+
   const handleOpenNotificationSkill = useCallback((skillId: string) => {
     skillApi.getSkill(skillId).then((skill) => {
       setActivePage("browse");
@@ -563,6 +612,8 @@ function App() {
             installedSkillIds={installedSkillIds}
             onOpen={handleOpenSkill}
             refreshKey={browseRefreshKey}
+            highlightedSkillId={highlightedBrowseSkillId}
+            onHighlightComplete={handleBrowseHighlightComplete}
           />
         ) : activePage === "my-skills" ? (
           <MySkillsPage
@@ -588,6 +639,7 @@ function App() {
         onClose={() => setSelectedSkill(null)}
         onInstall={handleInstallVersion}
         onUploadVersion={handleUploadVersion}
+        onOpenDerivedSource={handleOpenDerivedSource}
         onChanged={(skill) => {
           setSelectedSkill(skill);
           setBrowseRefreshKey((current) => current + 1);

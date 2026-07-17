@@ -23,6 +23,7 @@ interface SkillDetailModalProps {
   onInstall: (skill: SkillSummaryDto, version: SkillVersionDto) => void;
   onUploadVersion: (skill: SkillSummaryDto) => void;
   onChanged: (skill: SkillDetailDto) => void;
+  onOpenDerivedSource: (skillId: string) => void;
 }
 
 function formatDate(value: string): string {
@@ -78,6 +79,7 @@ function orderFileEntries(entries: FileEntryDto[]): FileEntryDto[] {
  * @param onClose - 关闭详情模态框的回调。
  * @param onInstall - 安装指定历史版本的回调。
  * @param onUploadVersion - 进入指定 Skill 新版本上传流程的回调。
+ * @param onOpenDerivedSource - 返回浏览页并定位来源 Skill 的回调。
  * @returns Skill 详情模态框。
  */
 export function SkillDetailModal({
@@ -88,6 +90,7 @@ export function SkillDetailModal({
   onInstall,
   onUploadVersion,
   onChanged,
+  onOpenDerivedSource,
 }: SkillDetailModalProps) {
   const [detail, setDetail] = useState<SkillDetailDto | null>(null);
   const [versions, setVersions] = useState<SkillVersionDto[]>([]);
@@ -374,11 +377,24 @@ export function SkillDetailModal({
           </div>
 
           {detail.derivedFrom && (
-            <div className="derived-source">
-              <span>派生自</span>
-              <strong>{detail.derivedFrom.skillName} · v{detail.derivedFrom.version}</strong>
-              {!detail.derivedFrom.linkable && <small>来源已归档，无法跳转</small>}
-            </div>
+            detail.derivedFrom.linkable ? (
+              <button
+                className="derived-source derived-source-link"
+                type="button"
+                aria-label={`查看来源 Skill ${detail.derivedFrom.skillName}`}
+                onClick={() => onOpenDerivedSource(detail.derivedFrom!.skillId)}
+              >
+                <span>派生自</span>
+                <strong>{detail.derivedFrom.skillName} · v{detail.derivedFrom.version}</strong>
+                <span className="derived-source-action">查看来源</span>
+              </button>
+            ) : (
+              <div className="derived-source">
+                <span>派生自</span>
+                <strong>{detail.derivedFrom.skillName} · v{detail.derivedFrom.version}</strong>
+                <small>来源已归档，无法跳转</small>
+              </div>
+            )
           )}
 
           <Tabs type="line">
