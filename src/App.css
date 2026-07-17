@@ -436,7 +436,7 @@ textarea:focus-visible,
 
 .filter-panel {
   flex: none;
-  padding: 16px;
+  padding: 8px 16px 16px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: #fff;
@@ -1796,7 +1796,7 @@ textarea:focus-visible,
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
-  padding: 16px;
+  padding: 8px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
 }
