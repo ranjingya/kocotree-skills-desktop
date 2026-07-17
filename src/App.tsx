@@ -15,10 +15,18 @@ import { SkillDetailModal } from "./components/SkillDetailModal";
 import { UploadPage } from "./components/UploadPage";
 import { MySkillsPage } from "./components/MySkillsPage";
 import { NotificationPanel } from "./components/NotificationPanel";
+import { InstallConfirmModal } from "./components/InstallConfirmModal";
 import "./App.css";
 
 type PageKey = "browse" | "my-skills" | "upload";
 type SortKey = "created" | "updated" | "popular";
+
+interface InstallPromptState {
+  skill: SkillSummaryDto;
+  version: SkillVersionDto;
+  warnings: string[];
+  forceRequired: boolean;
+}
 
 const logoTones = ["dark", "blue", "orange", "violet", "green"] as const;
 
@@ -253,6 +261,8 @@ function App() {
   const [installedSkillIds, setInstalledSkillIds] = useState(
     () => new Set(["0c9c2f8d-3e84-4c0c-8a15-d41d87fd1001", "0c9c2f8d-3e84-4c0c-8a15-d41d87fd1002"]),
   );
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptState | null>(null);
+  const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
     skillApi.getCurrentUser().then(setCurrentUser).catch((reason: unknown) => {
@@ -347,8 +357,23 @@ function App() {
    */
   function handleInstall(skill: SkillSummaryDto): void {
     requireAuth(() => {
-      void installSkillVersion(skill, skill.currentVersion.id, skill.currentVersion.version);
+      prepareInstall(skill, skill.currentVersion);
     });
+  }
+
+  function prepareInstall(skill: SkillSummaryDto, version: SkillVersionDto): void {
+    const warnings: string[] = [];
+    if (version.id !== skill.currentVersion.id) {
+      warnings.push(`你正在安装历史版本 v${version.version}，这可能会覆盖本地较新的版本。`);
+    }
+    if (skill.derivedFrom) {
+      warnings.push(`该 Skill 派生自 ${skill.derivedFrom.skillName}，建议只保留用途相近的一个 Skill。`);
+    }
+    if (warnings.length > 0) {
+      setInstallPrompt({ skill, version, warnings, forceRequired: false });
+      return;
+    }
+    void installSkillVersion(skill, version, false);
   }
 
   function handleOpenSkill(skill: SkillSummaryDto): void {
@@ -363,42 +388,49 @@ function App() {
    * @param version - 需要展示的 SemVer 版本号。
    * @returns 无返回值。
    */
-  async function installSkillVersion(
-    skill: SkillSummaryDto,
-    versionId: string,
-    version: string,
-  ): Promise<void> {
-    Toast.info(`正在准备 ${skill.displayName} v${version}`);
+  async function installSkillVersion(skill: SkillSummaryDto, version: SkillVersionDto, force: boolean): Promise<void> {
+    setInstalling(true);
+    Toast.info(`正在准备 ${skill.displayName} v${version.version}`);
     try {
-      const ticket = await skillApi.getDownloadTicket(skill.id, versionId);
+      const ticket = await skillApi.getDownloadTicket(skill.id, version.id);
       const detail = await skillApi.getSkill(skill.id);
-      const versionDetail = (await skillApi.listSkillVersions(skill.id)).items.find((item) => item.id === versionId);
-      if (!versionDetail) throw new SkillApiError("VERSION_NOT_FOUND", "没有找到该 Skill 版本");
       console.info("[KocotreeSkills] 已获取模拟下载凭证", {
         skillId: skill.id,
-        versionId,
+        versionId: version.id,
         packageSha256: ticket.packageSha256,
         target: "~/.agents/skills",
       });
-      await localSkillService.install({ skill: detail, version: versionDetail });
+      const localResult = await localSkillService.install({ skill: detail, version, force });
       await skillApi.recordInstallation({
         eventId: crypto.randomUUID(),
         skillId: skill.id,
-        versionId,
+        versionId: version.id,
         installedAt: new Date().toISOString(),
       });
       setInstalledSkillIds((currentIds) => new Set(currentIds).add(skill.id));
       setBrowseRefreshKey((current) => current + 1);
-      Toast.success("模拟安装完成，正式版将写入 ~/.agents/skills");
+      setInstallPrompt(null);
+      Toast.success(localResult.backupPath ? "已创建备份并完成模拟替换" : "模拟安装完成，正式版将写入 ~/.agents/skills");
     } catch (reason) {
       console.error("[KocotreeSkills] Skill 模拟安装失败", reason);
+      if (reason instanceof SkillApiError && reason.code === "LOCAL_SKILL_CONFLICT") {
+        setInstallPrompt({
+          skill,
+          version,
+          forceRequired: true,
+          warnings: ["本地目录中已经存在同名 Skill。它可能是手动安装或已经被修改，直接覆盖会丢失现有内容。"],
+        });
+        return;
+      }
       Toast.error(reason instanceof SkillApiError ? reason.message : "安装失败，请稍后重试");
+    } finally {
+      setInstalling(false);
     }
   }
 
   function handleInstallVersion(skill: SkillSummaryDto, version: SkillVersionDto): void {
     requireAuth(() => {
-      void installSkillVersion(skill, version.id, version.version);
+      prepareInstall(skill, version);
     });
   }
 
@@ -542,6 +574,18 @@ function App() {
         onClose={() => setSelectedSkill(null)}
         onInstall={handleInstallVersion}
         onUploadVersion={handleUploadVersion}
+      />
+
+      <InstallConfirmModal
+        skill={installPrompt?.skill ?? null}
+        version={installPrompt?.version ?? null}
+        warnings={installPrompt?.warnings ?? []}
+        forceRequired={installPrompt?.forceRequired ?? false}
+        loading={installing}
+        onCancel={() => setInstallPrompt(null)}
+        onConfirm={(force) => {
+          if (installPrompt) void installSkillVersion(installPrompt.skill, installPrompt.version, force);
+        }}
       />
 
       <Modal

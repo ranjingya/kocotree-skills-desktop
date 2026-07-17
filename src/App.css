@@ -1615,6 +1615,60 @@ textarea:focus-visible,
   color: #969aa2;
 }
 
+.install-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.install-confirm-content {
+  display: grid;
+  gap: 14px;
+}
+
+.install-target {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.install-target > span:last-child {
+  display: grid;
+  gap: 4px;
+}
+
+.install-target code {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.install-warning {
+  padding: 11px 13px;
+  border: 1px solid #f0d6ae;
+  border-radius: 8px;
+  background: #fffaf2;
+  color: #705832;
+}
+
+.install-warning.danger {
+  border-color: #f2c7c7;
+  background: #fff6f6;
+  color: #a73d3d;
+}
+
+.install-warning p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.install-warning p + p {
+  margin-top: 6px;
+}
+
+.install-confirm-content > small {
+  color: var(--muted);
+}
+
 .my-skills-toolbar {
   display: flex;
   min-height: 56px;

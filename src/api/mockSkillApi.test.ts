@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { SkillApiError } from "./contracts";
 import { MockSkillApi } from "./mockSkillApi";
 import { mockUsers } from "./mockData";
+import { MockLocalSkillService } from "./mockLocalSkillService";
 import { parseSkillPackage } from "./skillPackage";
 
 function expectApiError(reason: unknown, code: string): boolean {
@@ -129,5 +130,18 @@ describe("MockSkillApi", () => {
     expect((await api.listNotifications()).unreadCount).toBeGreaterThan(0);
     await api.readAllNotifications();
     expect((await api.listNotifications()).unreadCount).toBe(0);
+  });
+
+  it("本地同名未知 Skill 需要强制替换", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    const localApi = new MockLocalSkillService(0);
+    const target = (await api.listSkills()).items[0];
+    const localUnknown = (await localApi.scanSkills()).find((item) => item.status === "LOCAL_UNKNOWN")!;
+    const conflictingSkill = { ...target, skillName: localUnknown.skillName, displayName: localUnknown.displayName };
+    const conflictingVersion = { ...target.currentVersion, skillName: localUnknown.skillName };
+    await expect(localApi.install({ skill: conflictingSkill, version: conflictingVersion }))
+      .rejects.toSatisfy((reason: unknown) => expectApiError(reason, "LOCAL_SKILL_CONFLICT"));
+    const result = await localApi.install({ skill: conflictingSkill, version: conflictingVersion, force: true });
+    expect(result.backupPath).toContain(".agents/.kocotree/backups");
   });
 });
