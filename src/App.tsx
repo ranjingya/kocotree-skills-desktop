@@ -508,13 +508,6 @@ function App() {
               trigger="click"
               render={(
                 <div className="sidebar-user-popover">
-                  <div className="sidebar-user-summary">
-                    <span className="user-avatar">{currentUser.name.slice(0, 1)}</span>
-                    <span>
-                      <strong>{currentUser.name}</strong>
-                      <small>{currentUser.departmentPath.join(" · ") || "部门信息暂无"}</small>
-                    </span>
-                  </div>
                   <NotificationPanel onUnreadChange={handleUnreadChange} onOpenSkill={handleOpenNotificationSkill} />
                   <Dropdown.Menu>
                     <Dropdown.Item type="danger" icon={<AppIcon name="logout" size={17} />} onClick={() => void handleSignOut()}>

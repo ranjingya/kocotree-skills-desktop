@@ -253,38 +253,6 @@ textarea:focus-visible,
   background: #fff;
 }
 
-.sidebar-user-summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 9px;
-  border-bottom: 1px solid var(--border);
-}
-
-.sidebar-user-summary > span:last-child {
-  display: grid;
-  min-width: 0;
-  gap: 2px;
-}
-
-.sidebar-user-summary strong,
-.sidebar-user-summary small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sidebar-user-summary strong {
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.sidebar-user-summary small {
-  color: #8b8f97;
-  font-size: 11px;
-}
-
 .sidebar-user-popover .ui-dropdown-menu {
   width: 100%;
   padding: 5px;
@@ -306,15 +274,15 @@ textarea:focus-visible,
 }
 
 .notification-panel {
-  border-bottom: 1px solid var(--border);
+  padding: 6px;
 }
 
 .notification-panel > header {
   display: flex;
-  height: 36px;
+  height: 34px;
   align-items: center;
   justify-content: space-between;
-  padding: 0 9px;
+  padding: 0 5px;
 }
 
 .notification-panel > header strong {
@@ -327,24 +295,28 @@ textarea:focus-visible,
 }
 
 .notification-list {
+  display: grid;
   max-height: 210px;
   overflow-y: auto;
+  gap: 2px;
 }
 
 .notification-item {
   display: flex;
   width: 100%;
   gap: 7px;
-  padding: 8px 9px;
+  min-height: 48px;
+  padding: 8px;
   border: 0;
-  border-top: 1px solid #f0f1f2;
-  background: #fff;
+  border-radius: 7px;
+  background: transparent;
   cursor: pointer;
   text-align: left;
+  transition: background-color 140ms ease;
 }
 
 .notification-item:hover {
-  background: #f7f8f8;
+  background: var(--sidebar);
 }
 
 .notification-item > span:last-child {
@@ -361,13 +333,13 @@ textarea:focus-visible,
 }
 
 .notification-item strong {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .notification-item small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .notification-dot {
@@ -471,11 +443,12 @@ textarea:focus-visible,
   color: #696d77;
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color 140ms ease, color 140ms ease;
+  transition: background-color 140ms ease, box-shadow 140ms ease, color 140ms ease;
 }
 
-.sort-tabs button:hover {
-  background: #f1f2f3;
+.sort-tabs button:hover:not(.active) {
+  background: transparent;
+  box-shadow: inset 0 -2px #d8dcd8;
   color: #2e3036;
 }
 
@@ -487,6 +460,7 @@ textarea:focus-visible,
 
 .sort-tabs button.active:hover {
   background: #dfe0e2;
+  box-shadow: none;
 }
 
 .search-box {
