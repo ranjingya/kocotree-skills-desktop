@@ -327,7 +327,7 @@ export class MockSkillApi implements SkillApi {
     return clone(skill);
   }
 
-  async restoreSkill(skillId: string): Promise<SkillDetailDto> {
+  async restoreSkill(skillId: string, input: ReasonDto): Promise<SkillDetailDto> {
     await this.wait();
     const user = this.requireUser();
     const skill = this.findSkill(skillId);
@@ -335,6 +335,9 @@ export class MockSkillApi implements SkillApi {
     skill.status = "ACTIVE";
     skill.archivedAt = null;
     skill.archiveReason = null;
+    skill.updatedBy = user;
+    skill.updatedAt = new Date().toISOString();
+    console.info("[MockSkillApi] Skill 恢复完成", { skillId, reason: input.reason });
     return clone(skill);
   }
 

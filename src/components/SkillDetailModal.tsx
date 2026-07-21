@@ -76,9 +76,11 @@ function orderFileEntries(entries: FileEntryDto[]): FileEntryDto[] {
  * 功能说明：展示 Skill 平台信息、版本历史、版本文件树和文本文件预览。
  * @param skill - 当前打开的 Skill 摘要，为 null 时关闭模态框。
  * @param installedSkillIds - 客户端已安装 Skill 编号集合。
+ * @param currentUser - 当前登录用户，匿名状态为 null。
  * @param onClose - 关闭详情模态框的回调。
  * @param onInstall - 安装指定历史版本的回调。
  * @param onUploadVersion - 进入指定 Skill 新版本上传流程的回调。
+ * @param onChanged - Skill 状态或展示信息变化后的回调。
  * @param onOpenDerivedSource - 返回浏览页并定位来源 Skill 的回调。
  * @returns Skill 详情模态框。
  */
@@ -104,7 +106,7 @@ export function SkillDetailModal({
   const [fileTreeLoading, setFileTreeLoading] = useState(false);
   const [filePreviewLoading, setFilePreviewLoading] = useState(false);
   const [fileError, setFileError] = useState("");
-  const [managementAction, setManagementAction] = useState<{ type: "archive" | "withdraw"; version?: SkillVersionDto } | null>(null);
+  const [managementAction, setManagementAction] = useState<{ type: "archive" | "restore" | "withdraw"; version?: SkillVersionDto } | null>(null);
   const [managementReason, setManagementReason] = useState("");
   const [managementLoading, setManagementLoading] = useState(false);
   const [metadataVisible, setMetadataVisible] = useState(false);
@@ -218,6 +220,11 @@ export function SkillDetailModal({
         setDetail(updated);
         onChanged(updated);
         Toast.success("Skill 已归档");
+      } else if (managementAction.type === "restore") {
+        const updated = await skillApi.restoreSkill(detail.id, { reason: managementReason.trim() });
+        setDetail(updated);
+        onChanged(updated);
+        Toast.success("Skill 已恢复");
       } else if (managementAction.version) {
         const updatedVersion = await skillApi.withdrawSkillVersion(detail.id, managementAction.version.id, { reason: managementReason.trim() });
         setVersions((items) => items.map((item) => item.id === updatedVersion.id ? updatedVersion : item));
@@ -231,22 +238,6 @@ export function SkillDetailModal({
     } catch (reason) {
       console.error("[KocotreeSkills] Skill 管理操作失败", reason);
       Toast.error(reason instanceof SkillApiError ? reason.message : "操作失败，请稍后重试");
-    } finally {
-      setManagementLoading(false);
-    }
-  }
-
-  async function handleRestore(): Promise<void> {
-    if (!detail) return;
-    setManagementLoading(true);
-    try {
-      const updated = await skillApi.restoreSkill(detail.id);
-      setDetail(updated);
-      onChanged(updated);
-      Toast.success("Skill 已恢复");
-    } catch (reason) {
-      console.error("[KocotreeSkills] Skill 恢复失败", reason);
-      Toast.error(reason instanceof SkillApiError ? reason.message : "恢复失败，请稍后重试");
     } finally {
       setManagementLoading(false);
     }
@@ -277,7 +268,7 @@ export function SkillDetailModal({
                 </Button>
               )}
               {canManageSkill && detail.status === "ARCHIVED" && (
-                <Button theme="solid" type="primary" loading={managementLoading} onClick={() => void handleRestore()}>恢复 Skill</Button>
+                <Button theme="solid" type="primary" loading={managementLoading} onClick={() => { setManagementReason(""); setManagementAction({ type: "restore" }); }}>恢复 Skill</Button>
               )}
               {(detail.status === "ACTIVE" || canManageVersion) && (
                 <Dropdown
@@ -530,11 +521,16 @@ export function SkillDetailModal({
       ) : null}
     </Modal>
     <ReasonActionModal
-      title={managementAction?.type === "withdraw" ? "撤回版本" : "归档 Skill"}
-      description={managementAction?.type === "withdraw" ? "撤回后该版本将无法继续安装，本地已经安装的副本仍可使用。" : "归档后 Skill 不再出现在技能广场，本地已经安装的副本仍可使用。"}
+      title={managementAction?.type === "withdraw" ? "撤回版本" : managementAction?.type === "restore" ? "恢复 Skill" : "归档 Skill"}
+      description={managementAction?.type === "withdraw"
+        ? "撤回后该版本将无法继续安装，本地已经安装的副本仍可使用。"
+        : managementAction?.type === "restore"
+          ? "恢复后 Skill 将重新出现在技能广场，并允许用户下载和安装。"
+          : "归档后 Skill 不再出现在技能广场，本地已经安装的副本仍可使用。"}
       visible={managementAction !== null}
       reason={managementReason}
       loading={managementLoading}
+      confirmType={managementAction?.type === "restore" ? "primary" : "danger"}
       onReasonChange={setManagementReason}
       onCancel={() => { setManagementAction(null); setManagementReason(""); }}
       onConfirm={() => void handleManagementConfirm()}

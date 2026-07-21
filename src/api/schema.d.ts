@@ -4,40 +4,6 @@
  */
 
 export interface paths {
-    "/api/auth/device": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 发起设备授权 */
-        post: operations["createDeviceAuthorization"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/auth/device/{deviceCode}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 轮询设备授权 */
-        get: operations["pollDeviceAuthorization"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/users/me": {
         parameters: {
             query?: never;
@@ -443,7 +409,8 @@ export interface components {
             error: components["schemas"]["ErrorBody"];
         };
         ErrorBody: {
-            code: string;
+            /** @enum {string} */
+            code: "COLLABORATOR_REQUIRED" | "CONTENT_UNCHANGED" | "DISPLAY_NAME_CONFIRMATION_REQUIRED" | "DUPLICATE_SKILL_NAME" | "FILE_NOT_FOUND" | "FILE_PREVIEW_UNAVAILABLE" | "FORBIDDEN" | "INITIAL_VERSION_REQUIRED" | "INSTALLATION_UNAVAILABLE" | "INVALID_REQUEST" | "INVALID_SEMVER" | "INVALID_SKILL_PACKAGE" | "OWNER_REQUIRED" | "PACKAGE_HASH_MISMATCH" | "PACKAGE_TOO_LARGE" | "SKILL_NAME_MISMATCH" | "SKILL_NOT_FOUND" | "SKILL_UNAVAILABLE" | "TRANSFER_NOT_FOUND" | "TRANSFER_RESOLVED" | "UNAUTHENTICATED" | "USER_DISABLED" | "VERSION_ALREADY_EXISTS" | "VERSION_CONFLICT" | "VERSION_NOT_FOUND" | "VERSION_NOT_GREATER";
             message: string;
             details?: {
                 [key: string]: unknown;
@@ -538,20 +505,6 @@ export interface components {
             path: string;
             content: string;
             sha256: string;
-        };
-        DeviceAuthorization: {
-            deviceCode: string;
-            /** Format: uri */
-            verificationUrl: string;
-            expiresIn: number;
-            interval: number;
-        };
-        AuthTokenResponse: {
-            accessToken: string;
-            /** @constant */
-            tokenType: "Bearer";
-            expiresIn: number;
-            user: components["schemas"]["User"];
         };
         CreateSkillRequest: {
             /** Format: binary */
@@ -698,7 +651,6 @@ export interface components {
         };
     };
     parameters: {
-        DeviceCode: string;
         SkillId: string;
         VersionId: string;
         TransferId: string;
@@ -711,62 +663,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    createDeviceAuthorization: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 授权会话已创建 */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeviceAuthorization"];
-                };
-            };
-            default: components["responses"]["ErrorResponse"];
-        };
-    };
-    pollDeviceAuthorization: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                deviceCode: components["parameters"]["DeviceCode"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 授权成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AuthTokenResponse"];
-                };
-            };
-            /** @description 等待用户完成授权 */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @constant */
-                        status: "PENDING";
-                    };
-                };
-            };
-            default: components["responses"]["ErrorResponse"];
-        };
-    };
     getCurrentUser: {
         parameters: {
             query?: never;

@@ -167,6 +167,17 @@ describe("MockSkillApi", () => {
     expect((await api.listMySkills({ relation: "ARCHIVED" })).items.some((skill) => skill.id === target.id)).toBe(true);
   });
 
+  it("填写原因后可以恢复已归档 Skill", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    const user = await api.signIn();
+    const target = (await api.listSkills()).items.find((skill) => skill.owner.id === user.id)!;
+    await api.archiveSkill(target.id, { reason: "测试归档" });
+    const restored = await api.restoreSkill(target.id, { reason: "恢复维护" });
+    expect(restored.status).toBe("ACTIVE");
+    expect(restored.archiveReason).toBeNull();
+    expect((await api.listSkills()).items.some((skill) => skill.id === target.id)).toBe(true);
+  });
+
   it("允许撤回后续版本但保留 1.0.0", async () => {
     const api = new MockSkillApi({ delayMs: 0 });
     await api.signIn();

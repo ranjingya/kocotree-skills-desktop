@@ -1,12 +1,13 @@
 import { Button, Modal, TextArea } from "./ui";
 
 /**
- * 功能说明：为归档和版本撤回收集必填原因并统一确认交互。
+ * 功能说明：为 Skill 生命周期管理操作收集必填原因并统一确认交互。
  * @param title - 当前管理动作标题。
  * @param description - 动作影响说明。
  * @param visible - 是否显示模态框。
  * @param reason - 当前原因文本。
  * @param loading - 提交是否进行中。
+ * @param confirmType - 确认按钮的语义颜色。
  * @param onReasonChange - 原因文本变化回调。
  * @param onCancel - 取消动作回调。
  * @param onConfirm - 确认动作回调。
@@ -18,6 +19,7 @@ export function ReasonActionModal({
   visible,
   reason,
   loading,
+  confirmType = "danger",
   onReasonChange,
   onCancel,
   onConfirm,
@@ -27,6 +29,7 @@ export function ReasonActionModal({
   visible: boolean;
   reason: string;
   loading: boolean;
+  confirmType?: "primary" | "danger";
   onReasonChange: (reason: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
@@ -42,7 +45,7 @@ export function ReasonActionModal({
       footer={
         <div className="reason-action-footer">
           <Button disabled={loading} onClick={onCancel}>取消</Button>
-          <Button theme="solid" type="danger" loading={loading} disabled={!reason.trim()} onClick={onConfirm}>确认</Button>
+          <Button theme="solid" type={confirmType} loading={loading} disabled={!reason.trim()} onClick={onConfirm}>确认</Button>
         </div>
       }
     >

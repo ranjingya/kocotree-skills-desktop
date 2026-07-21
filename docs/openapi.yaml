@@ -1,15 +1,13 @@
 openapi: 3.1.0
 info:
   title: Kocotree Skills API
-  version: 0.2.0
+  version: 0.3.0
   description: Kocotree Skills 客户端、模拟接口与未来真实后端共同遵守的契约。
   license:
     name: Proprietary
 servers:
   - url: http://localhost:3000
 tags:
-  - name: Auth
-    description: 飞书设备授权。
   - name: Users
     description: 当前用户和用户关联的 Skill。
   - name: Tags
@@ -25,49 +23,6 @@ tags:
   - name: Notifications
     description: 应用内弱提醒。
 paths:
-  /api/auth/device:
-    post:
-      tags: [Auth]
-      summary: 发起设备授权
-      operationId: createDeviceAuthorization
-      security: []
-      responses:
-        '201':
-          description: 授权会话已创建
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DeviceAuthorization'
-        default:
-          $ref: '#/components/responses/ErrorResponse'
-  /api/auth/device/{deviceCode}:
-    get:
-      tags: [Auth]
-      summary: 轮询设备授权
-      operationId: pollDeviceAuthorization
-      security: []
-      parameters:
-        - $ref: '#/components/parameters/DeviceCode'
-      responses:
-        '200':
-          description: 授权成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthTokenResponse'
-        '202':
-          description: 等待用户完成授权
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [status]
-                properties:
-                  status:
-                    type: string
-                    const: PENDING
-        default:
-          $ref: '#/components/responses/ErrorResponse'
   /api/users/me:
     get:
       tags: [Users]
@@ -183,6 +138,13 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/CreateSkillRequest'
+            encoding:
+              tagIds:
+                style: form
+                explode: true
+              newTagNames:
+                style: form
+                explode: true
       responses:
         '201':
           description: Skill 已创建
@@ -270,6 +232,13 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PublishVersionRequest'
+            encoding:
+              tagIds:
+                style: form
+                explode: true
+              newTagNames:
+                style: form
+                explode: true
       responses:
         '201':
           description: 新版本已发布
@@ -643,12 +612,6 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
-    DeviceCode:
-      name: deviceCode
-      in: path
-      required: true
-      schema:
-        type: string
     SkillId:
       name: skillId
       in: path
@@ -704,6 +667,33 @@ components:
       properties:
         code:
           type: string
+          enum:
+            - COLLABORATOR_REQUIRED
+            - CONTENT_UNCHANGED
+            - DISPLAY_NAME_CONFIRMATION_REQUIRED
+            - DUPLICATE_SKILL_NAME
+            - FILE_NOT_FOUND
+            - FILE_PREVIEW_UNAVAILABLE
+            - FORBIDDEN
+            - INITIAL_VERSION_REQUIRED
+            - INSTALLATION_UNAVAILABLE
+            - INVALID_REQUEST
+            - INVALID_SEMVER
+            - INVALID_SKILL_PACKAGE
+            - OWNER_REQUIRED
+            - PACKAGE_HASH_MISMATCH
+            - PACKAGE_TOO_LARGE
+            - SKILL_NAME_MISMATCH
+            - SKILL_NOT_FOUND
+            - SKILL_UNAVAILABLE
+            - TRANSFER_NOT_FOUND
+            - TRANSFER_RESOLVED
+            - UNAUTHENTICATED
+            - USER_DISABLED
+            - VERSION_ALREADY_EXISTS
+            - VERSION_CONFLICT
+            - VERSION_NOT_FOUND
+            - VERSION_NOT_GREATER
         message:
           type: string
         details:
@@ -945,35 +935,6 @@ components:
           type: string
         sha256:
           type: string
-    DeviceAuthorization:
-      type: object
-      required: [deviceCode, verificationUrl, expiresIn, interval]
-      properties:
-        deviceCode:
-          type: string
-        verificationUrl:
-          type: string
-          format: uri
-        expiresIn:
-          type: integer
-          minimum: 1
-        interval:
-          type: integer
-          minimum: 1
-    AuthTokenResponse:
-      type: object
-      required: [accessToken, tokenType, expiresIn, user]
-      properties:
-        accessToken:
-          type: string
-        tokenType:
-          type: string
-          const: Bearer
-        expiresIn:
-          type: integer
-          minimum: 1
-        user:
-          $ref: '#/components/schemas/User'
     CreateSkillRequest:
       type: object
       required: [file, displayName, displayDescription]
