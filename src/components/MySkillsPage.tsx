@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { Button, Spin } from "./ui";
 import {
   localSkillService,
@@ -88,6 +88,24 @@ export function MySkillsPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  /**
+   * 功能说明：通过方向键、Home 和 End 在本地与在线页签之间移动，并同步激活页签。
+   * @param event - 当前页签按钮触发的键盘事件。
+   * @returns 无返回值。
+   */
+  function handleDomainTabKeyDown(event: KeyboardEvent<HTMLButtonElement>): void {
+    let nextDomain: Domain | null = null;
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp" || event.key === "Home") {
+      nextDomain = "local";
+    } else if (event.key === "ArrowRight" || event.key === "ArrowDown" || event.key === "End") {
+      nextDomain = "online";
+    }
+    if (!nextDomain) return;
+    event.preventDefault();
+    setDomain(nextDomain);
+    window.requestAnimationFrame(() => document.getElementById(`skill-domain-tab-${nextDomain}`)?.focus());
+  }
+
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -134,8 +152,32 @@ export function MySkillsPage({
       <header className="page-heading"><h1>我的 Skill</h1></header>
       <section className="my-skills-toolbar">
         <div className="domain-tabs" role="tablist" aria-label="Skill 数据来源">
-          <button className={domain === "local" ? "active" : ""} type="button" onClick={() => setDomain("local")}>本地</button>
-          <button className={domain === "online" ? "active" : ""} type="button" onClick={() => setDomain("online")}>在线</button>
+          <button
+            id="skill-domain-tab-local"
+            className={domain === "local" ? "active" : ""}
+            type="button"
+            role="tab"
+            aria-controls="skill-domain-panel-local"
+            aria-selected={domain === "local"}
+            tabIndex={domain === "local" ? 0 : -1}
+            onClick={() => setDomain("local")}
+            onKeyDown={handleDomainTabKeyDown}
+          >
+            本地
+          </button>
+          <button
+            id="skill-domain-tab-online"
+            className={domain === "online" ? "active" : ""}
+            type="button"
+            role="tab"
+            aria-controls="skill-domain-panel-online"
+            aria-selected={domain === "online"}
+            tabIndex={domain === "online" ? 0 : -1}
+            onClick={() => setDomain("online")}
+            onKeyDown={handleDomainTabKeyDown}
+          >
+            在线
+          </button>
         </div>
         {domain === "online" && currentUser && (
           <div className="relation-tabs">
@@ -150,18 +192,18 @@ export function MySkillsPage({
       </section>
 
       {domain === "online" && !currentUser ? (
-        <section className="empty-state my-skills-login">
+        <section id="skill-domain-panel-online" className="empty-state my-skills-login" role="tabpanel" aria-labelledby="skill-domain-tab-online">
           <AppIcon name="library" size={30} />
           <strong>登录后查看在线 Skill</strong>
           <span>本地 Skill 无需登录即可管理</span>
           <Button theme="solid" type="primary" onClick={onLogin}>模拟飞书登录</Button>
         </section>
       ) : loading ? (
-        <section className="empty-state"><Spin /><strong>正在读取 Skill</strong></section>
+        <section id={`skill-domain-panel-${domain}`} className="empty-state" role="tabpanel" aria-labelledby={`skill-domain-tab-${domain}`}><Spin /><strong>正在读取 Skill</strong></section>
       ) : error ? (
-        <section className="empty-state"><strong>暂时无法加载</strong><span>{error}</span></section>
+        <section id={`skill-domain-panel-${domain}`} className="empty-state" role="tabpanel" aria-labelledby={`skill-domain-tab-${domain}`}><strong>暂时无法加载</strong><span>{error}</span></section>
       ) : domain === "local" ? (
-        <section className="my-skills-list">
+        <section id="skill-domain-panel-local" className="my-skills-list" role="tabpanel" aria-labelledby="skill-domain-tab-local">
           {localSkills.map((item) => {
             const { record } = item;
             const presentation = getOnlinePresentation(item);
@@ -191,7 +233,7 @@ export function MySkillsPage({
           {localSkills.length === 0 && <div className="empty-state my-skills-empty"><strong>这里还没有本地 Skill</strong><span>从技能广场安装后会显示在这里</span></div>}
         </section>
       ) : (
-        <section className="my-skills-list">
+        <section id="skill-domain-panel-online" className="my-skills-list" role="tabpanel" aria-labelledby="skill-domain-tab-online">
           {onlineSkills.map((skill) => (
             <button className="my-skill-card online" type="button" key={skill.id} onClick={() => onOpenSkill(skill)}>
               <span className="my-skill-card-heading">

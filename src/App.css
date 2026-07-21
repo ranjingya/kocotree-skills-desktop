@@ -27,7 +27,7 @@ html,
 body,
 #root {
   width: 100%;
-  min-width: 760px;
+  min-width: 320px;
   height: 100%;
   margin: 0;
   overflow: hidden;
@@ -2219,6 +2219,186 @@ button.my-skill-card:hover {
 
   .skill-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .sidebar {
+    flex-basis: 68px;
+    padding: 16px 8px 14px;
+  }
+
+  .brand {
+    justify-content: center;
+    padding: 0 0 20px;
+  }
+
+  .brand strong,
+  .sidebar-nav button > span,
+  .sidebar-user > span:nth-child(2) {
+    display: none;
+  }
+
+  .sidebar-nav button,
+  .sidebar-user {
+    justify-content: center;
+    gap: 0;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .sidebar-user-area {
+    padding-top: 8px;
+  }
+
+  .sidebar-user-dropdown {
+    width: min(280px, calc(100vw - 24px));
+  }
+
+  .page-content {
+    padding: 20px 16px 28px;
+  }
+
+  .page-heading {
+    margin-bottom: 18px;
+  }
+
+  .form-grid,
+  .inspection-result dl,
+  .detail-metadata {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-panel {
+    padding: 18px;
+  }
+
+  .my-skills-toolbar {
+    height: auto;
+    min-height: 0;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .domain-tabs,
+  .relation-tabs {
+    width: 100%;
+  }
+
+  .domain-tabs button,
+  .relation-tabs button {
+    min-width: 0;
+    flex: 1;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .detail-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-stats > div + div {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .file-browser {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(112px, 0.7fr) minmax(140px, 1fr);
+  }
+
+  .file-tree {
+    border-right: 0;
+    border-bottom: 1px solid #e7e9ec;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    flex-basis: 60px;
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
+  .brand-symbol {
+    width: 28px;
+    height: 28px;
+    font-size: 17px;
+  }
+
+  .user-avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .page-content {
+    padding: 16px 12px 24px;
+  }
+
+  .page-heading h1 {
+    font-size: 21px;
+  }
+
+  .filter-panel {
+    padding: 8px;
+  }
+
+  .sort-tabs {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+    padding: 0;
+  }
+
+  .sort-tabs button {
+    min-width: 0;
+    gap: 4px;
+    padding-right: 2px;
+    padding-left: 2px;
+    font-size: 11px;
+  }
+
+  .source-row {
+    padding-top: 10px;
+  }
+
+  .skill-card,
+  .my-skill-card {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .upload-panel {
+    padding: 14px;
+  }
+
+  .file-dropzone {
+    min-height: 132px;
+    padding: 14px;
+  }
+
+  .form-actions,
+  .detail-footer,
+  .install-confirm-actions,
+  .metadata-actions,
+  .ownership-actions {
+    flex-wrap: wrap;
+  }
+
+  .skill-detail-modal .ui-modal-body {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .detail-body > .ui-tabs > .ui-tabs-list {
+    overflow-x: auto;
+  }
+
+  .detail-body > .ui-tabs > .ui-tabs-content {
+    padding-right: 0;
+    padding-left: 0;
   }
 }
 

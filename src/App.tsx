@@ -204,10 +204,11 @@ function BrowsePage({
 
       <section className="filter-panel" aria-label="Skill 筛选条件">
         <div className="filter-first-row">
-          <div className="sort-tabs" role="tablist" aria-label="排序方式">
+          <div className="sort-tabs" role="group" aria-label="排序方式">
             <button
               className={sort === "updated" ? "active" : ""}
               type="button"
+              aria-pressed={sort === "updated"}
               onClick={() => setSort("updated")}
             >
               <AppIcon name="clock" size={16} />最近更新
@@ -215,6 +216,7 @@ function BrowsePage({
             <button
               className={sort === "created" ? "active" : ""}
               type="button"
+              aria-pressed={sort === "created"}
               onClick={() => setSort("created")}
             >
               <AppIcon name="trend" size={16} />最近创建
@@ -222,6 +224,7 @@ function BrowsePage({
             <button
               className={sort === "popular" ? "active" : ""}
               type="button"
+              aria-pressed={sort === "popular"}
               onClick={() => setSort("popular")}
             >
               <AppIcon name="hot" size={16} />热门
@@ -562,6 +565,8 @@ function App() {
           <button
             className={activePage === "browse" ? "active" : ""}
             type="button"
+            aria-label="Skill 浏览"
+            title="Skill 浏览"
             onClick={() => setActivePage("browse")}
           >
             <AppIcon name="browse" size={20} />
@@ -570,6 +575,8 @@ function App() {
           <button
             className={activePage === "upload" ? "active" : ""}
             type="button"
+            aria-label="上传 Skill"
+            title="上传 Skill"
             onClick={() => requireAuth(() => { setUploadTargetSkill(null); setActivePage("upload"); })}
           >
             <AppIcon name="upload" size={20} />
@@ -578,6 +585,8 @@ function App() {
           <button
             className={activePage === "my-skills" ? "active" : ""}
             type="button"
+            aria-label="我的 Skill"
+            title="我的 Skill"
             onClick={() => setActivePage("my-skills")}
           >
             <AppIcon name="library" size={20} />
@@ -613,7 +622,7 @@ function App() {
               </button>
             </Dropdown>
           ) : (
-            <button className="sidebar-user" type="button" onClick={() => setLoginVisible(true)}>
+            <button className="sidebar-user" type="button" aria-label="登录 Kocotree Skills" title="登录 Kocotree Skills" onClick={() => setLoginVisible(true)}>
               <span className="connection-dot" />
               <span><strong>未登录</strong><small>浏览无需登录 · 点击登录</small></span>
             </button>
