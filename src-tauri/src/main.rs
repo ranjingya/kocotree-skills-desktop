@@ -1,6 +1,6 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+// 防止 Windows 发布版本额外显示控制台窗口，请勿删除。
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    tauri_study_lib::run()
+    kocotree_skills_desktop_lib::run()
 }

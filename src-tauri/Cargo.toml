@@ -1,17 +1,16 @@
 [package]
-name = "tauri-study"
+name = "kocotree-skills-desktop"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# 更多字段及其定义请参阅 https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "tauri_study_lib"
+# `_lib` 后缀用于确保库名唯一，避免与二进制程序名称冲突。
+# 该问题主要出现在 Windows，详见 https://github.com/rust-lang/cargo/issues/8519
+name = "kocotree_skills_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -24,7 +23,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 
-# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+# 优化配置说明：https://tauri.app/concept/size/#cargo-configuration
 [profile.release]
 codegen-units = 1
 lto = true
