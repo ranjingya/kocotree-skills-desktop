@@ -557,7 +557,7 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-symbol">K</span>
+          <img className="brand-symbol" src="/kocotree-logo.svg" alt="" width={40} height={40} />
           <strong>Kocotree 技能广场</strong>
         </div>
 

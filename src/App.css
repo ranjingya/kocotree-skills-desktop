@@ -77,9 +77,9 @@ textarea:focus-visible,
 .brand {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 8px;
   padding: 0 8px 25px;
-  font-size: 15px;
+  font-size: 16px;
   letter-spacing: -0.02em;
 }
 
@@ -89,18 +89,10 @@ textarea:focus-visible,
 }
 
 .brand-symbol {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border-radius: 10px 4px 10px 4px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 20px;
-  font-style: italic;
-  font-weight: 800;
-  transform: rotate(-5deg);
-  box-shadow: 0 4px 10px rgba(0, 145, 57, 0.18);
+  display: block;
+  flex: none;
+  width: 40px;
+  height: 40px;
 }
 
 .sidebar-nav {
@@ -426,20 +418,17 @@ textarea:focus-visible,
   display: flex;
   flex: none;
   align-items: center;
-  gap: 4px;
-  padding: 3px;
-  border: 1px solid transparent;
-  border-radius: 10px;
+  gap: 10px;
 }
 
 .sort-tabs button {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  height: 38px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 7px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: transparent;
   color: #696d77;
   cursor: pointer;
@@ -453,13 +442,14 @@ textarea:focus-visible,
 }
 
 .sort-tabs button.active {
-  background: #e9e9eb;
-  color: #2e3036;
+  border-color: #b9dfc5;
+  background: #eef8f1;
+  color: #087b34;
   font-weight: 600;
 }
 
 .sort-tabs button.active:hover {
-  background: #dfe0e2;
+  background: #e4f4e9;
   box-shadow: none;
 }
 
@@ -2198,13 +2188,12 @@ button.my-skill-card:hover {
 
   .brand {
     gap: 8px;
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .brand-symbol {
-    width: 28px;
-    height: 28px;
-    font-size: 17px;
+    width: 34px;
+    height: 34px;
   }
 
   .page-content {
@@ -2322,9 +2311,8 @@ button.my-skill-card:hover {
   }
 
   .brand-symbol {
-    width: 28px;
-    height: 28px;
-    font-size: 17px;
+    width: 32px;
+    height: 32px;
   }
 
   .user-avatar {
@@ -2348,7 +2336,7 @@ button.my-skill-card:hover {
     display: grid;
     width: 100%;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 2px;
+    gap: 6px;
     padding: 0;
   }
 
