@@ -78,7 +78,7 @@ textarea:focus-visible,
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 8px 25px;
+  padding: 0 8px 12px;
   font-size: 16px;
   letter-spacing: -0.02em;
 }
@@ -93,6 +93,54 @@ textarea:focus-visible,
   flex: none;
   width: 40px;
   height: 40px;
+}
+
+.logo-playground {
+  margin: 0 8px 18px;
+}
+
+.logo-playground-label {
+  display: block;
+  margin-bottom: 5px;
+  color: #858a85;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.logo-playground-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.logo-playground-options button {
+  display: grid;
+  min-width: 0;
+  height: 38px;
+  padding: 3px;
+  place-items: center;
+  border: 1px solid #dfe3df;
+  border-radius: 7px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.logo-playground-options button:hover {
+  border-color: #a7cdb3;
+  background: #f5fbf7;
+}
+
+.logo-playground-options button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px rgba(0, 145, 57, 0.12);
+}
+
+.logo-playground-options img {
+  display: block;
+  width: 30px;
+  height: 30px;
 }
 
 .sidebar-nav {
@@ -2223,6 +2271,7 @@ button.my-skill-card:hover {
   }
 
   .brand strong,
+  .logo-playground,
   .sidebar-nav button > span,
   .sidebar-user > span:nth-child(2) {
     display: none;

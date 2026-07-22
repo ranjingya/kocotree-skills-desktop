@@ -20,6 +20,7 @@ import "./App.css";
 
 type PageKey = "browse" | "my-skills" | "upload";
 type SortKey = "created" | "updated" | "popular";
+type LogoVariantKey = "color" | "black" | "inverse" | "green";
 
 interface InstallPromptState {
   skill: SkillSummaryDto;
@@ -30,6 +31,12 @@ interface InstallPromptState {
 }
 
 const logoTones = ["dark", "blue", "orange", "violet", "green"] as const;
+const logoVariants: ReadonlyArray<{ key: LogoVariantKey; label: string; src: string }> = [
+  { key: "color", label: "标准彩色", src: "/kocotree-logo-color.svg" },
+  { key: "black", label: "墨稿", src: "/kocotree-logo-black.svg" },
+  { key: "inverse", label: "反白稿", src: "/kocotree-logo.svg" },
+  { key: "green", label: "绿色单色", src: "/kocotree-logo-green.svg" },
+];
 
 function getSkillShortCode(skill: SkillSummaryDto): string {
   const words = skill.skillName.split("-").filter(Boolean);
@@ -297,6 +304,7 @@ function BrowsePage({
  */
 function App() {
   const [activePage, setActivePage] = useState<PageKey>("browse");
+  const [logoVariant, setLogoVariant] = useState<LogoVariantKey>("inverse");
   const [selectedSkill, setSelectedSkill] = useState<SkillSummaryDto | null>(null);
   const [highlightedBrowseSkillId, setHighlightedBrowseSkillId] = useState<string | null>(null);
   const [uploadTargetSkill, setUploadTargetSkill] = useState<SkillSummaryDto | null>(null);
@@ -557,9 +565,34 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <img className="brand-symbol" src="/kocotree-logo.svg" alt="" width={40} height={40} />
+          <img
+            className="brand-symbol"
+            src={logoVariants.find((variant) => variant.key === logoVariant)?.src}
+            alt=""
+            width={40}
+            height={40}
+          />
           <strong>Kocotree 技能广场</strong>
         </div>
+
+        <section className="logo-playground" aria-label="Logo Playground">
+          <span className="logo-playground-label">Logo Playground</span>
+          <div className="logo-playground-options" role="group" aria-label="左上角 Logo 方案">
+            {logoVariants.map((variant) => (
+              <button
+                className={logoVariant === variant.key ? "active" : ""}
+                type="button"
+                key={variant.key}
+                title={variant.label}
+                aria-label={`预览${variant.label}`}
+                aria-pressed={logoVariant === variant.key}
+                onClick={() => setLogoVariant(variant.key)}
+              >
+                <img src={variant.src} alt="" width={30} height={30} />
+              </button>
+            ))}
+          </div>
+        </section>
 
         <nav className="sidebar-nav" aria-label="主导航">
           <button

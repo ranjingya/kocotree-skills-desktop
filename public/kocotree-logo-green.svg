@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 320 320" role="img" aria-labelledby="logo-title logo-description">
+  <title id="logo-title">Kocotree 绿色单色标志</title>
+  <desc id="logo-description">品牌绿色 Kocotree 标志</desc>
+  <g transform="translate(46 65) scale(.76)" fill="#009139">
+    <path d="M0 128A84 84 0 0 1 82 44A74.5 74.5 0 0 1 218 44A84 84 0 0 1 300 128Z" />
+    <rect x="4" y="149" width="47" height="91" rx="2" />
+    <path d="M91 149h42c4 0 6 4 4 7l-25 38 25 39c2 3 0 7-4 7H91l-28-46Z" />
+    <rect x="160" y="149" width="47" height="91" rx="2" />
+    <path d="M246 149h42c4 0 6 4 4 7l-24 38 24 39c2 3 0 7-4 7h-42l-27-46Z" />
+  </g>
+</svg>
