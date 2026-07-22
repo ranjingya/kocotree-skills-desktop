@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-labelledby="logo-title logo-description">
   <title id="logo-title">Kocotree Windows</title>
   <desc id="logo-description">适配 Windows 图标网格的透明底绿色 Kocotree 品牌符号</desc>
-  <g transform="translate(2 6.4) scale(.1466667)" fill="#009139">
+  <g transform="translate(0 1.28) scale(.16)" fill="#009139">
     <path d="M0 128A84 84 0 0 1 82 44A74.5 74.5 0 0 1 218 44A84 84 0 0 1 300 128Z" />
     <rect x="4" y="149" width="47" height="91" rx="2" />
     <path d="M91 149h42c4 0 6 4 4 7l-25 38 25 39c2 3 0 7-4 7H91l-28-46Z" />
