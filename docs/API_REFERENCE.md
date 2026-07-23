@@ -4,7 +4,7 @@
 
 本文档定义 Kocotree Skills 前端、模拟接口和未来真实后端共同遵守的 Skill 领域 HTTP 契约。权威机器可读定义为 [`openapi.yaml`](./openapi.yaml)。接口路径直接使用 `/api/...`，不增加 `/v1` 中间层。
 
-ZIP 本地解析、本地安装、目录哈希扫描、备份和 Claude 链接属于客户端能力，不通过服务端 Skill DTO 表达。登录协议和令牌生命周期由认证接入方负责，本契约只约定需要身份的请求携带 Bearer Token。
+ZIP 本地解析和平台版本安装属于客户端能力，不通过服务端 Skill DTO 表达。安装过程内部使用的目标校验、冲突备份和失败回滚也不属于 HTTP API。任意本地 Skill 扫描、来源识别、移除、手动恢复和 Claude 链接管理不在当前范围。登录协议和令牌生命周期由认证接入方负责，本契约只约定需要身份的请求携带 Bearer Token。
 
 ## 2. 公共约定
 
@@ -170,17 +170,15 @@ Tag 治理规则暂缓。单个 Skill 最多关联 5 个 Tag。
 | `sha256` | `string \| null` | 是 | 普通文件哈希。 |
 | `previewable` | `boolean` | 是 | 是否支持文本预览。 |
 
-### 4.7 本地状态边界
+### 4.7 本地安装边界
 
-以下状态只属于客户端，不进入 Skill DTO：
+以下信息只属于客户端安装流程，不进入 Skill DTO：
 
-- `PLATFORM_INSTALLED`
-- `PLATFORM_MODIFIED`
-- `PLATFORM_MATCHED`
-- `LOCAL_UNKNOWN`
-- `MISSING`
-- Claude 链接状态
-- 备份与恢复状态
+- 安装目标路径
+- 同名目录冲突状态
+- 覆盖确认状态
+- 内部备份和失败回滚结果
+- 安装凭证写入结果
 
 ## 5. 当前用户
 
@@ -271,7 +269,7 @@ GET /api/skills/{skillId}/versions/{versionId}/files/content?path=references%2Fg
 GET /api/users/me/skills?relation=OWNED&page=1&pageSize=20
 ```
 
-`relation` 支持 `OWNED`、`COLLABORATED`、`ARCHIVED`。本地 Skill 列表由客户端扫描，不使用此接口。
+`relation` 支持 `OWNED`、`COLLABORATED`、`ARCHIVED`。该接口只返回在线平台关系，不表达本地安装目录。
 
 ## 8. 创建、更新和平台信息
 
@@ -457,7 +455,7 @@ POST /api/ownership-transfers/{transferId}/cancel
 
 邀请 7 天后自动过期。同一 Skill 同时只能存在一个 `PENDING` 邀请。
 
-## 11. 下载、安装匹配与上报
+## 11. 下载与安装上报
 
 ### 11.1 获取下载凭证
 
@@ -481,7 +479,7 @@ Authorization: Bearer <token>
 }
 ```
 
-### 11.2 恢复平台匹配
+### 11.2 平台匹配接口
 
 ```http
 POST /api/installations/resolve
@@ -496,6 +494,8 @@ Authorization: Bearer <token>
 ```
 
 匹配成功返回 `skillId`、`versionId` 和在线状态；归档 Skill 只返回最小归档状态。此操作不增加安装次数。
+
+该服务端接口保留在在线契约中，当前客户端安装流程不调用。
 
 ### 11.3 上报安装成功
 
