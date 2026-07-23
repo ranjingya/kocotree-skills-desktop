@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Kocotree Skills API
-  version: 0.3.0
+  version: 0.4.0
   description: Kocotree Skills 客户端、模拟接口与未来真实后端共同遵守的契约。
   license:
     name: Proprietary
@@ -36,7 +36,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/UserResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/users/me/skills:
@@ -61,7 +61,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SkillPage'
+                $ref: '#/components/schemas/SkillPageResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/tags:
@@ -83,9 +83,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Tag'
+                $ref: '#/components/schemas/TagListResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills:
@@ -123,7 +121,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SkillPage'
+                $ref: '#/components/schemas/SkillPageResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
     post:
@@ -151,7 +149,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SkillDetail'
+                $ref: '#/components/schemas/SkillDetailResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}:
@@ -171,7 +169,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SkillDetail'
+                $ref: '#/components/schemas/SkillDetailResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
     patch:
@@ -194,7 +192,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SkillDetail'
+                $ref: '#/components/schemas/SkillDetailResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}/versions:
@@ -215,7 +213,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VersionPage'
+                $ref: '#/components/schemas/VersionPageResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
     post:
@@ -245,7 +243,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SkillDetail'
+                $ref: '#/components/schemas/SkillDetailResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}/versions/{versionId}:
@@ -265,7 +263,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SkillVersionDetail'
+                $ref: '#/components/schemas/SkillVersionDetailResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}/versions/{versionId}/files:
@@ -285,9 +283,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/FileEntry'
+                $ref: '#/components/schemas/FileEntryListResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}/versions/{versionId}/files/content:
@@ -312,7 +308,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FileContent'
+                $ref: '#/components/schemas/FileContentResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}/versions/{versionId}/withdraw:
@@ -337,7 +333,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SkillVersion'
+                $ref: '#/components/schemas/SkillVersionResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}/archive:
@@ -361,7 +357,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SkillDetail'
+                $ref: '#/components/schemas/SkillDetailResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}/restore:
@@ -385,7 +381,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SkillDetail'
+                $ref: '#/components/schemas/SkillDetailResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}/installation-status:
@@ -410,7 +406,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InstallationStatus'
+                $ref: '#/components/schemas/InstallationStatusResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}/ownership-transfers:
@@ -434,7 +430,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OwnershipTransfer'
+                $ref: '#/components/schemas/OwnershipTransferResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/ownership-transfers/{transferId}/accept:
@@ -452,7 +448,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OwnershipTransfer'
+                $ref: '#/components/schemas/OwnershipTransferResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/ownership-transfers/{transferId}/reject:
@@ -470,7 +466,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OwnershipTransfer'
+                $ref: '#/components/schemas/OwnershipTransferResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/ownership-transfers/{transferId}/cancel:
@@ -488,7 +484,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OwnershipTransfer'
+                $ref: '#/components/schemas/OwnershipTransferResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}/versions/{versionId}/download-tickets:
@@ -507,7 +503,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DownloadTicket'
+                $ref: '#/components/schemas/DownloadTicketResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/installations/resolve:
@@ -529,7 +525,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InstallationResolution'
+                $ref: '#/components/schemas/InstallationResolutionResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/installations/events:
@@ -546,8 +542,12 @@ paths:
             schema:
               $ref: '#/components/schemas/InstallationEventRequest'
       responses:
-        '204':
+        '200':
           description: 已记录或幂等接受
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/notifications:
@@ -572,7 +572,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationPage'
+                $ref: '#/components/schemas/NotificationPageResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/notifications/read-all:
@@ -583,8 +583,12 @@ paths:
       security:
         - BearerAuth: []
       responses:
-        '204':
+        '200':
           description: 已全部标记已读
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/notifications/{notificationId}/read:
@@ -601,8 +605,12 @@ paths:
           schema:
             type: string
       responses:
-        '204':
+        '200':
           description: 已标记已读
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptyResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
 components:
@@ -657,48 +665,63 @@ components:
   schemas:
     ErrorResponse:
       type: object
-      required: [error]
-      properties:
-        error:
-          $ref: '#/components/schemas/ErrorBody'
-    ErrorBody:
-      type: object
-      required: [code, message]
+      required: [code, data, msg]
       properties:
         code:
-          type: string
-          enum:
-            - COLLABORATOR_REQUIRED
-            - CONTENT_UNCHANGED
-            - DISPLAY_NAME_CONFIRMATION_REQUIRED
-            - DUPLICATE_SKILL_NAME
-            - FILE_NOT_FOUND
-            - FILE_PREVIEW_UNAVAILABLE
-            - FORBIDDEN
-            - INITIAL_VERSION_REQUIRED
-            - INSTALLATION_UNAVAILABLE
-            - INVALID_REQUEST
-            - INVALID_SEMVER
-            - INVALID_SKILL_PACKAGE
-            - OWNER_REQUIRED
-            - PACKAGE_HASH_MISMATCH
-            - PACKAGE_TOO_LARGE
-            - SKILL_NAME_MISMATCH
-            - SKILL_NOT_FOUND
-            - SKILL_UNAVAILABLE
-            - TRANSFER_NOT_FOUND
-            - TRANSFER_RESOLVED
-            - UNAUTHENTICATED
-            - USER_DISABLED
-            - VERSION_ALREADY_EXISTS
-            - VERSION_CONFLICT
-            - VERSION_NOT_FOUND
-            - VERSION_NOT_GREATER
-        message:
-          type: string
-        details:
-          type: [object, 'null']
+          $ref: '#/components/schemas/ErrorCode'
+        data:
+          description: 结构化错误详情；没有附加详情时为空对象。
+          type: object
           additionalProperties: true
+        msg:
+          description: 用户可读的错误信息。
+          type: string
+    ErrorCode:
+      type: string
+      enum:
+        - COLLABORATOR_REQUIRED
+        - CONTENT_UNCHANGED
+        - DISPLAY_NAME_CONFIRMATION_REQUIRED
+        - DUPLICATE_SKILL_NAME
+        - FILE_NOT_FOUND
+        - FILE_PREVIEW_UNAVAILABLE
+        - FORBIDDEN
+        - INITIAL_VERSION_REQUIRED
+        - INSTALLATION_UNAVAILABLE
+        - INVALID_REQUEST
+        - INVALID_SEMVER
+        - INVALID_SKILL_PACKAGE
+        - OWNER_REQUIRED
+        - PACKAGE_HASH_MISMATCH
+        - PACKAGE_TOO_LARGE
+        - SKILL_NAME_MISMATCH
+        - SKILL_NOT_FOUND
+        - SKILL_UNAVAILABLE
+        - TRANSFER_NOT_FOUND
+        - TRANSFER_RESOLVED
+        - UNAUTHENTICATED
+        - USER_DISABLED
+        - VERSION_ALREADY_EXISTS
+        - VERSION_CONFLICT
+        - VERSION_NOT_FOUND
+        - VERSION_NOT_GREATER
+    ApiSuccessMeta:
+      type: object
+      required: [code, msg]
+      properties:
+        code:
+          description: 成功响应的固定业务码。
+          type: string
+          const: SUCCESS
+        msg:
+          description: 成功响应的固定信息。
+          type: string
+          const: success
+          example: success
+    EmptyData:
+      type: object
+      maxProperties: 0
+      additionalProperties: false
     User:
       type: object
       required: [id, name, avatarUrl, departmentPath, status, role, syncedAt]
@@ -1238,3 +1261,127 @@ components:
         unreadCount:
           type: integer
           minimum: 0
+    UserResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/User'
+    SkillPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/SkillPage'
+    TagListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Tag'
+    SkillDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/SkillDetail'
+    VersionPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/VersionPage'
+    SkillVersionDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/SkillVersionDetail'
+    FileEntryListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/FileEntry'
+    FileContentResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/FileContent'
+    SkillVersionResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/SkillVersion'
+    InstallationStatusResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/InstallationStatus'
+    OwnershipTransferResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/OwnershipTransfer'
+    DownloadTicketResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/DownloadTicket'
+    InstallationResolutionResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/InstallationResolution'
+    NotificationPageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/NotificationPage'
+    EmptyResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/EmptyData'

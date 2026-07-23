@@ -406,16 +406,30 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         ErrorResponse: {
-            error: components["schemas"]["ErrorBody"];
-        };
-        ErrorBody: {
-            /** @enum {string} */
-            code: "COLLABORATOR_REQUIRED" | "CONTENT_UNCHANGED" | "DISPLAY_NAME_CONFIRMATION_REQUIRED" | "DUPLICATE_SKILL_NAME" | "FILE_NOT_FOUND" | "FILE_PREVIEW_UNAVAILABLE" | "FORBIDDEN" | "INITIAL_VERSION_REQUIRED" | "INSTALLATION_UNAVAILABLE" | "INVALID_REQUEST" | "INVALID_SEMVER" | "INVALID_SKILL_PACKAGE" | "OWNER_REQUIRED" | "PACKAGE_HASH_MISMATCH" | "PACKAGE_TOO_LARGE" | "SKILL_NAME_MISMATCH" | "SKILL_NOT_FOUND" | "SKILL_UNAVAILABLE" | "TRANSFER_NOT_FOUND" | "TRANSFER_RESOLVED" | "UNAUTHENTICATED" | "USER_DISABLED" | "VERSION_ALREADY_EXISTS" | "VERSION_CONFLICT" | "VERSION_NOT_FOUND" | "VERSION_NOT_GREATER";
-            message: string;
-            details?: {
+            code: components["schemas"]["ErrorCode"];
+            /** @description 结构化错误详情；没有附加详情时为空对象。 */
+            data: {
                 [key: string]: unknown;
-            } | null;
+            };
+            /** @description 用户可读的错误信息。 */
+            msg: string;
         };
+        /** @enum {string} */
+        ErrorCode: "COLLABORATOR_REQUIRED" | "CONTENT_UNCHANGED" | "DISPLAY_NAME_CONFIRMATION_REQUIRED" | "DUPLICATE_SKILL_NAME" | "FILE_NOT_FOUND" | "FILE_PREVIEW_UNAVAILABLE" | "FORBIDDEN" | "INITIAL_VERSION_REQUIRED" | "INSTALLATION_UNAVAILABLE" | "INVALID_REQUEST" | "INVALID_SEMVER" | "INVALID_SKILL_PACKAGE" | "OWNER_REQUIRED" | "PACKAGE_HASH_MISMATCH" | "PACKAGE_TOO_LARGE" | "SKILL_NAME_MISMATCH" | "SKILL_NOT_FOUND" | "SKILL_UNAVAILABLE" | "TRANSFER_NOT_FOUND" | "TRANSFER_RESOLVED" | "UNAUTHENTICATED" | "USER_DISABLED" | "VERSION_ALREADY_EXISTS" | "VERSION_CONFLICT" | "VERSION_NOT_FOUND" | "VERSION_NOT_GREATER";
+        ApiSuccessMeta: {
+            /**
+             * @description 成功响应的固定业务码。
+             * @constant
+             */
+            code: "SUCCESS";
+            /**
+             * @description 成功响应的固定信息。
+             * @example success
+             * @constant
+             */
+            msg: "success";
+        };
+        EmptyData: Record<string, never>;
         User: {
             id: string;
             name: string;
@@ -638,6 +652,51 @@ export interface components {
             total: number;
             unreadCount: number;
         };
+        UserResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["User"];
+        };
+        SkillPageResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["SkillPage"];
+        };
+        TagListResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["Tag"][];
+        };
+        SkillDetailResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["SkillDetail"];
+        };
+        VersionPageResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["VersionPage"];
+        };
+        SkillVersionDetailResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["SkillVersionDetail"];
+        };
+        FileEntryListResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["FileEntry"][];
+        };
+        FileContentResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["FileContent"];
+        };
+        SkillVersionResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["SkillVersion"];
+        };
+        InstallationStatusResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["InstallationStatus"];
+        };
+        OwnershipTransferResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["OwnershipTransfer"];
+        };
+        DownloadTicketResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["DownloadTicket"];
+        };
+        InstallationResolutionResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["InstallationResolution"];
+        };
+        NotificationPageResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["NotificationPage"];
+        };
+        EmptyResponse: components["schemas"]["ApiSuccessMeta"] & {
+            data: components["schemas"]["EmptyData"];
+        };
     };
     responses: {
         /** @description 请求失败 */
@@ -678,7 +737,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["User"];
+                    "application/json": components["schemas"]["UserResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -703,7 +762,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillPage"];
+                    "application/json": components["schemas"]["SkillPageResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -726,7 +785,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Tag"][];
+                    "application/json": components["schemas"]["TagListResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -753,7 +812,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillPage"];
+                    "application/json": components["schemas"]["SkillPageResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -778,7 +837,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillDetail"];
+                    "application/json": components["schemas"]["SkillDetailResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -801,7 +860,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillDetail"];
+                    "application/json": components["schemas"]["SkillDetailResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -828,7 +887,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillDetail"];
+                    "application/json": components["schemas"]["SkillDetailResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -854,7 +913,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["VersionPage"];
+                    "application/json": components["schemas"]["VersionPageResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -881,7 +940,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillDetail"];
+                    "application/json": components["schemas"]["SkillDetailResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -905,7 +964,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillVersionDetail"];
+                    "application/json": components["schemas"]["SkillVersionDetailResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -929,7 +988,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["FileEntry"][];
+                    "application/json": components["schemas"]["FileEntryListResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -955,7 +1014,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["FileContent"];
+                    "application/json": components["schemas"]["FileContentResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -983,7 +1042,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillVersion"];
+                    "application/json": components["schemas"]["SkillVersionResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1010,7 +1069,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillDetail"];
+                    "application/json": components["schemas"]["SkillDetailResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1037,7 +1096,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillDetail"];
+                    "application/json": components["schemas"]["SkillDetailResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1063,7 +1122,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InstallationStatus"];
+                    "application/json": components["schemas"]["InstallationStatusResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1090,7 +1149,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OwnershipTransfer"];
+                    "application/json": components["schemas"]["OwnershipTransferResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1113,7 +1172,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OwnershipTransfer"];
+                    "application/json": components["schemas"]["OwnershipTransferResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1136,7 +1195,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OwnershipTransfer"];
+                    "application/json": components["schemas"]["OwnershipTransferResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1159,7 +1218,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OwnershipTransfer"];
+                    "application/json": components["schemas"]["OwnershipTransferResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1183,7 +1242,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DownloadTicket"];
+                    "application/json": components["schemas"]["DownloadTicketResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1208,7 +1267,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InstallationResolution"];
+                    "application/json": components["schemas"]["InstallationResolutionResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1228,11 +1287,13 @@ export interface operations {
         };
         responses: {
             /** @description 已记录或幂等接受 */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
             };
             default: components["responses"]["ErrorResponse"];
         };
@@ -1256,7 +1317,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NotificationPage"];
+                    "application/json": components["schemas"]["NotificationPageResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1272,11 +1333,13 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 已全部标记已读 */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
             };
             default: components["responses"]["ErrorResponse"];
         };
@@ -1293,11 +1356,13 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 已标记已读 */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
             };
             default: components["responses"]["ErrorResponse"];
         };

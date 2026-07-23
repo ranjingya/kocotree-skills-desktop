@@ -1,6 +1,11 @@
 import type { components, operations } from "./schema";
 
-export type ApiErrorDto = components["schemas"]["ErrorBody"];
+/** HTTP 成功响应外层；真实客户端完成校验后向页面返回 data。 */
+export type ApiSuccessDto<T> = components["schemas"]["ApiSuccessMeta"] & {
+  data: T;
+};
+/** HTTP 失败响应外层；data 保存结构化错误详情。 */
+export type ApiErrorDto = components["schemas"]["ErrorResponse"];
 export type UserDto = components["schemas"]["User"];
 export type TagDto = components["schemas"]["Tag"];
 export type DerivedSourceDto = components["schemas"]["DerivedSource"];
@@ -113,7 +118,7 @@ export interface LocalSkillService {
 
 /**
  * 功能说明：约束模拟接口和未来 HTTP 接口共同实现的平台能力。
- * 返回值：各方法均返回与 OpenAPI 契约一致的异步结果。
+ * 返回值：各方法均返回 HTTP 响应外层中的 data，页面不直接处理 code 和 msg。
  */
 export interface SkillApi {
   listSkills(query?: ListSkillsQuery): Promise<SkillPageDto>;
