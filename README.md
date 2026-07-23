@@ -49,7 +49,7 @@ pnpm build
 pnpm api:generate
 ```
 
-接口定义以 [`docs/openapi.yaml`](./docs/openapi.yaml) 为准，产品与流程说明见 [`docs/PRODUCT_DESIGN.md`](./docs/PRODUCT_DESIGN.md)。
+接口定义以 [`docs/openapi.yaml`](./docs/openapi.yaml) 为准，产品与流程说明见 [`docs/PRODUCT_DESIGN.md`](./docs/PRODUCT_DESIGN.md)，本地与在线领域边界见 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)。
 
 ## 推荐编辑器配置
 
