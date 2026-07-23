@@ -572,8 +572,18 @@ POST /api/notifications/read-all
 
 | 错误码 | 说明 |
 | --- | --- |
-| `LOCAL_SKILL_CONFLICT` | 本地存在同名未知来源或已修改的 Skill，需要用户确认覆盖。 |
-| `INSTALL_ROLLBACK_COMPLETED` | 安装替换失败，原 Skill 已自动恢复。 |
+| `DOWNLOAD_URL_INVALID` | 下载地址格式无效。 |
+| `DOWNLOAD_URL_UNSUPPORTED` | 下载地址不是受支持的 HTTP、HTTPS 或 Mock data URL。 |
+| `DOWNLOAD_FAILED` | 安装包下载或读取失败。 |
+| `PACKAGE_TOO_LARGE` | 下载包、解压总大小或文件数量超过限制。 |
+| `PACKAGE_HASH_MISMATCH` | 下载字节的 SHA-256 与凭证不一致。 |
+| `INVALID_SKILL_PACKAGE` | ZIP 结构、路径或 `SKILL.md` 不合法。 |
+| `SKILL_NAME_MISMATCH` | `SKILL.md` 名称与目标 Skill 不一致。 |
+| `LOCAL_SKILL_CONFLICT` | 目标目录已经存在，当前真实安装器停止写入。 |
+| `LOCAL_INSTALL_IO_ERROR` | 创建目录、解压文件或最终移动失败。 |
+| `HOME_DIRECTORY_UNAVAILABLE` | 无法解析当前用户主目录。 |
+
+Mock 安装器保留 `INSTALL_ROLLBACK_COMPLETED` 场景，用于验证未来覆盖失败提示；当前真实安装器不覆盖已有目录。
 
 ## 14. TypeScript DTO 示例
 

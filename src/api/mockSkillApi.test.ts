@@ -240,6 +240,23 @@ describe("MockSkillApi", () => {
       .rejects.toSatisfy((reason: unknown) => expectApiError(reason, "PACKAGE_HASH_MISMATCH"));
   });
 
+  it("下载凭证包含可安装且哈希一致的模拟 ZIP", async () => {
+    const api = new MockSkillApi({ delayMs: 0 });
+    await api.signIn();
+    const skill = (await api.listSkills()).items[0];
+    const ticket = await api.getDownloadTicket(skill.id, skill.currentVersion.id);
+    const encoded = ticket.url.split(",", 2)[1];
+    const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const digest = await crypto.subtle.digest("SHA-256", buffer);
+    const packageSha256 = `sha256:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+    const archive = await JSZip.loadAsync(bytes);
+
+    expect(ticket.url.startsWith("data:application/zip;base64,")).toBe(true);
+    expect(packageSha256).toBe(ticket.packageSha256);
+    expect(await archive.file("SKILL.md")?.async("string")).toContain(`name: ${skill.skillName}`);
+  });
+
   it("本地修改和替换失败场景保留强制安装与恢复结果", async () => {
     const api = new MockSkillApi({ delayMs: 0 });
     const localApi = new MockLocalSkillService(0);

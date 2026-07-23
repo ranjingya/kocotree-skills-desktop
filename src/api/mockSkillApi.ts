@@ -1,3 +1,4 @@
+import JSZip from "jszip";
 import {
   SkillApiError,
   type CreateOwnershipTransferDto,
@@ -50,6 +51,22 @@ type StoredVersionFileSource = SkillArchiveSource | MockVersionFileSource;
 
 function clone<T>(value: T): T {
   return structuredClone(value);
+}
+
+async function sha256(bytes: Uint8Array): Promise<string> {
+  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `sha256:${hex}`;
+}
+
+function toBase64(bytes: Uint8Array): string {
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
 }
 
 function compareSemVer(left: string, right: string): number {
@@ -390,6 +407,12 @@ export class MockSkillApi implements SkillApi {
   async rejectOwnershipTransfer(transferId: string): Promise<OwnershipTransferDto> { await this.wait(); this.requireUser(); return clone(this.resolveTransfer(transferId, "REJECTED")); }
   async cancelOwnershipTransfer(transferId: string): Promise<OwnershipTransferDto> { await this.wait(); this.requireUser(); return clone(this.resolveTransfer(transferId, "CANCELED")); }
 
+  /**
+   * 功能说明：签发模拟下载凭证，并生成可供真实 Tauri 安装器使用的 ZIP data URL。
+   * @param skillId - 需要安装的 Skill ID。
+   * @param versionId - 需要安装的版本 ID。
+   * @returns 包含可下载 ZIP、实际包哈希和内容哈希的模拟凭证。
+   */
   async getDownloadTicket(skillId: string, versionId: string): Promise<DownloadTicketDto> {
     await this.wait();
     this.requireUser();
@@ -401,7 +424,32 @@ export class MockSkillApi implements SkillApi {
       console.error("[MockSkillApi] 模拟安装包校验失败", { skillId, versionId, code: scenario.downloadError.code });
       throw new SkillApiError(scenario.downloadError.code, scenario.downloadError.message);
     }
-    return { url: `https://mock.kocotree.local/skills/${skillId}/${versionId}.zip`, expiresAt: new Date(Date.now() + 300_000).toISOString(), packageSha256: version.packageSha256, contentHash: version.contentHash };
+    const source = this.versionFiles.get(versionId);
+    if (!source) {
+      throw new SkillApiError("FILE_NOT_FOUND", "没有找到该版本的安装文件");
+    }
+    const archive = "archive" in source ? source.archive : new JSZip();
+    if (!("archive" in source)) {
+      for (const entry of source.files) {
+        if (entry.type !== "FILE") continue;
+        const content = source.contents[entry.path]
+          ?? new Uint8Array(Math.max(0, entry.size ?? 0));
+        archive.file(entry.path, content);
+      }
+    }
+    const bytes = await archive.generateAsync({ type: "uint8array", compression: "DEFLATE" });
+    const packageSha256 = await sha256(bytes);
+    console.info("[MockSkillApi] 已生成可安装的模拟 ZIP", {
+      skillId,
+      versionId,
+      packageSize: bytes.byteLength,
+    });
+    return {
+      url: `data:application/zip;base64,${toBase64(bytes)}`,
+      expiresAt: new Date(Date.now() + 300_000).toISOString(),
+      packageSha256,
+      contentHash: version.contentHash,
+    };
   }
 
   async resolveInstallation(input: { skillName: string; contentHash: string }): Promise<InstallationResolutionDto> {

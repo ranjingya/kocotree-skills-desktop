@@ -97,6 +97,7 @@ export interface LocalSkillRecord {
 export interface LocalInstallRequest {
   skill: SkillSummaryDto;
   version: SkillVersionDto;
+  ticket?: DownloadTicketDto;
   force?: boolean;
 }
 
@@ -108,12 +109,19 @@ export interface LocalInstallResult {
 }
 
 /**
+ * 功能说明：隔离真实 Tauri 安装器与浏览器 Mock 安装器。
+ * 返回值：指定平台版本的本地安装结果。
+ */
+export interface SkillInstaller {
+  install(input: LocalInstallRequest): Promise<LocalInstallResult>;
+}
+
+/**
  * 功能说明：隔离 Tauri 文件系统实现与 React 页面，浏览器阶段由 Mock 实现。
  * 返回值：本地扫描和安装操作的异步结果。
  */
-export interface LocalSkillService {
+export interface LocalSkillService extends SkillInstaller {
   scanSkills(): Promise<LocalSkillRecord[]>;
-  install(input: LocalInstallRequest): Promise<LocalInstallResult>;
   remove(skillName: string): Promise<void>;
 }
 

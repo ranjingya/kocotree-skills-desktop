@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Dropdown, Modal, Tooltip, Toast, ToastViewport } from "./components/ui";
 import {
   skillApi,
+  installer,
   localSkillService,
+  usesRealInstaller,
   SkillApiError,
   type SkillSummaryDto,
   type SkillVersionDto,
@@ -308,7 +310,9 @@ function App() {
   const sidebarUserAreaRef = useRef<HTMLDivElement>(null);
   const protectedActionRef = useRef<(() => void) | null>(null);
   const [installedSkillIds, setInstalledSkillIds] = useState(
-    () => new Set(["0c9c2f8d-3e84-4c0c-8a15-d41d87fd1001", "0c9c2f8d-3e84-4c0c-8a15-d41d87fd1002"]),
+    () => new Set(usesRealInstaller
+      ? []
+      : ["0c9c2f8d-3e84-4c0c-8a15-d41d87fd1001", "0c9c2f8d-3e84-4c0c-8a15-d41d87fd1002"]),
   );
   const [installPrompt, setInstallPrompt] = useState<InstallPromptState | null>(null);
   const [installFeedback, setInstallFeedback] = useState<InstallFeedbackState | null>(null);
@@ -321,6 +325,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (usesRealInstaller) return;
     localSkillService.scanSkills().then((items) => {
       setInstalledSkillIds(new Set(items.flatMap((item) => item.skillId ? [item.skillId] : [])));
     }).catch((reason: unknown) => {
@@ -403,10 +408,7 @@ function App() {
   function prepareInstall(skill: SkillSummaryDto, version: SkillVersionDto): void {
     const warnings: string[] = [];
     if (version.id !== skill.currentVersion.id) {
-      warnings.push(`你正在从最新版 v${skill.currentVersion.version} 降级到历史版本 v${version.version}。确认后会先备份本地目录，再安装目标版本。`);
-    }
-    if (skill.derivedFrom) {
-      warnings.push(`该 Skill 派生自 ${skill.derivedFrom.skillName}，建议只保留用途相近的一个 Skill。`);
+      warnings.push(`你正在从最新版 v${skill.currentVersion.version} 降级到历史版本 v${version.version}。确认后将安装目标版本。`);
     }
     if (warnings.length > 0) {
       setInstallPrompt({ skill, version, warnings, forceRequired: false });
@@ -433,10 +435,10 @@ function App() {
   }
 
   /**
-   * 功能说明：通过模拟下载凭证完成指定版本的安装与幂等上报。
+   * 功能说明：通过下载凭证完成指定版本的本地安装与幂等上报。
    * @param skill - 需要安装的 Skill。
-   * @param versionId - 需要安装的版本 UUID。
-   * @param version - 需要展示的 SemVer 版本号。
+   * @param version - 需要安装的版本信息。
+   * @param force - 是否确认覆盖本地同名目录。
    * @returns 无返回值。
    */
   async function installSkillVersion(skill: SkillSummaryDto, version: SkillVersionDto, force: boolean): Promise<void> {
@@ -445,13 +447,13 @@ function App() {
     try {
       const ticket = await skillApi.getDownloadTicket(skill.id, version.id);
       const detail = await skillApi.getSkill(skill.id);
-      console.info("[KocotreeSkills] 已获取模拟下载凭证", {
+      console.info("[KocotreeSkills] 已获取下载凭证", {
         skillId: skill.id,
         versionId: version.id,
         packageSha256: ticket.packageSha256,
         target: "~/.agents/skills",
       });
-      const localResult = await localSkillService.install({ skill: detail, version, force });
+      const localResult = await installer.install({ skill: detail, version, ticket, force });
       await skillApi.recordInstallation({
         eventId: crypto.randomUUID(),
         skillId: skill.id,
@@ -469,11 +471,26 @@ function App() {
           details: localResult.notices,
         });
       } else {
-        Toast.success(localResult.backupPath ? "已创建备份并完成模拟替换" : "模拟安装完成，正式版将写入 ~/.agents/skills");
+        Toast.success(`Skill 已安装到 ${localResult.record.installPath}`);
       }
     } catch (reason) {
-      console.error("[KocotreeSkills] Skill 模拟安装失败", reason);
+      console.error("[KocotreeSkills] Skill 安装失败", reason);
       if (reason instanceof SkillApiError && reason.code === "LOCAL_SKILL_CONFLICT") {
+        if (reason.details?.forceSupported === false) {
+          setInstallPrompt(null);
+          setInstallFeedback({
+            tone: "warning",
+            title: "本地已存在同名 Skill",
+            summary: "第一版真实安装暂不覆盖已有目录，本地内容没有发生变化。",
+            details: [
+              typeof reason.details.targetPath === "string"
+                ? `冲突目录：${reason.details.targetPath}`
+                : reason.message,
+              "请先确认并手工处理同名目录，覆盖安装将在后续版本提供。",
+            ],
+          });
+          return;
+        }
         const localStatus = typeof reason.details?.localSkill === "object" && reason.details.localSkill !== null
           ? (reason.details.localSkill as { status?: string }).status
           : undefined;
