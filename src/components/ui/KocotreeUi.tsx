@@ -427,7 +427,7 @@ export function Dropdown({ render, children, contentClassName = "", className = 
     <div
       className={`ui-dropdown ${className}`}
       ref={rootRef}
-      onClickCapture={(event) => {
+      onClick={(event) => {
         if ((event.target as HTMLElement).closest('[role="menuitem"]')) setOpen(false);
       }}
     >
