@@ -2,6 +2,7 @@ import {
   Children,
   cloneElement,
   isValidElement,
+  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
@@ -441,8 +442,12 @@ Dropdown.Item = DropdownItem;
 
 type ToastTone = "success" | "error" | "info";
 interface ToastMessage { id: number; tone: ToastTone; text: string }
+interface ToastDisplayMessage extends ToastMessage { closing: boolean }
+interface ToastTimerState { timerId: number | null; remainingMs: number; startedAt: number }
 type ToastListener = (message: ToastMessage) => void;
 const toastListeners = new Set<ToastListener>();
+const toastDurationMs = 2800;
+const toastExitDurationMs = 160;
 let toastId = 0;
 function publishToast(tone: ToastTone, text: string): void {
   const message = { id: ++toastId, tone, text };
@@ -459,35 +464,87 @@ export const Toast = {
  * @returns 固定在窗口右下角的消息列表。
  */
 export function ToastViewport() {
-  const [messages, setMessages] = useState<ToastMessage[]>([]);
-  const timersRef = useRef(new Map<number, number>());
+  const [messages, setMessages] = useState<ToastDisplayMessage[]>([]);
+  const timersRef = useRef(new Map<number, ToastTimerState>());
+  const exitTimersRef = useRef(new Map<number, number>());
+
+  const startDismiss = useCallback((id: number) => {
+    const timerState = timersRef.current.get(id);
+    if (timerState && timerState.timerId !== null) window.clearTimeout(timerState.timerId);
+    timersRef.current.delete(id);
+    if (exitTimersRef.current.has(id)) return;
+
+    setMessages((current) => current.map((item) => item.id === id ? { ...item, closing: true } : item));
+    const exitTimerId = window.setTimeout(() => {
+      exitTimersRef.current.delete(id);
+      setMessages((current) => current.filter((item) => item.id !== id));
+    }, toastExitDurationMs);
+    exitTimersRef.current.set(id, exitTimerId);
+  }, []);
+
+  const scheduleDismiss = useCallback((id: number, delayMs: number) => {
+    const timerId = window.setTimeout(() => {
+      startDismiss(id);
+    }, delayMs);
+    timersRef.current.set(id, { timerId, remainingMs: delayMs, startedAt: Date.now() });
+  }, [startDismiss]);
+
   useEffect(() => {
     const listener: ToastListener = (message) => {
-      setMessages((current) => [...current, message]);
-      const timer = window.setTimeout(() => {
-        setMessages((current) => current.filter((item) => item.id !== message.id));
-        timersRef.current.delete(message.id);
-      }, 2800);
-      timersRef.current.set(message.id, timer);
+      setMessages((current) => [...current, { ...message, closing: false }]);
+      scheduleDismiss(message.id, toastDurationMs);
     };
     toastListeners.add(listener);
     return () => {
       toastListeners.delete(listener);
-      timersRef.current.forEach((timer) => window.clearTimeout(timer));
+      timersRef.current.forEach(({ timerId }) => {
+        if (timerId !== null) window.clearTimeout(timerId);
+      });
       timersRef.current.clear();
+      exitTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      exitTimersRef.current.clear();
     };
-  }, []);
+  }, [scheduleDismiss]);
+
   const dismiss = (id: number) => {
-    const timer = timersRef.current.get(id);
-    if (timer) window.clearTimeout(timer);
-    timersRef.current.delete(id);
-    setMessages((current) => current.filter((item) => item.id !== id));
+    startDismiss(id);
   };
+
+  const pauseDismiss = (id: number) => {
+    const timerState = timersRef.current.get(id);
+    if (!timerState || timerState.timerId === null) return;
+    window.clearTimeout(timerState.timerId);
+    const elapsedMs = Date.now() - timerState.startedAt;
+    timersRef.current.set(id, {
+      timerId: null,
+      remainingMs: Math.max(0, timerState.remainingMs - elapsedMs),
+      startedAt: 0,
+    });
+  };
+
+  const resumeDismiss = (id: number) => {
+    const timerState = timersRef.current.get(id);
+    if (!timerState || timerState.timerId !== null) return;
+    scheduleDismiss(id, timerState.remainingMs);
+  };
+
   return (
     <div className="ui-toast-viewport" aria-live="polite" aria-atomic="false">
       {messages.map((message) => (
-        <div className={`ui-toast ui-toast-${message.tone}`} role={message.tone === "error" ? "alert" : "status"} key={message.id}>
-          <span className="ui-toast-mark" aria-hidden="true" /><span>{message.text}</span><Tooltip content="关闭提示"><button type="button" aria-label="关闭提示" onClick={() => dismiss(message.id)}>×</button></Tooltip>
+        <div
+          className={`ui-toast ui-toast-${message.tone} ${message.closing ? "ui-toast-closing" : ""}`}
+          role={message.tone === "error" ? "alert" : "status"}
+          key={message.id}
+          onPointerEnter={() => pauseDismiss(message.id)}
+          onPointerLeave={() => resumeDismiss(message.id)}
+        >
+          <span className="ui-toast-mark" aria-hidden="true" />
+          <span>{message.text}</span>
+          <Tooltip content="关闭提示">
+            <button className="ui-toast-close" type="button" aria-label="关闭提示" onClick={() => dismiss(message.id)}>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg>
+            </button>
+          </Tooltip>
         </div>
       ))}
     </div>

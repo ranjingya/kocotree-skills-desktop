@@ -110,12 +110,15 @@
 .ui-dropdown-item.danger { color: #bf5039; }
 
 .ui-toast-viewport { position: fixed; z-index: 1300; right: 20px; bottom: 20px; display: grid; width: min(360px, calc(100vw - 40px)); gap: 8px; pointer-events: none; }
-.ui-toast { display: grid; grid-template-columns: 8px minmax(0, 1fr) 24px; align-items: center; gap: 10px; min-height: 48px; padding: 10px 10px 10px 14px; border: 1px solid var(--koco-border); border-radius: 10px; background: #fff; box-shadow: 0 12px 30px rgba(34, 24, 20, 0.14); color: var(--koco-text); font-size: 13px; pointer-events: auto; animation: ui-toast-in 160ms ease; }
+.ui-toast { display: grid; grid-template-columns: 8px minmax(0, 1fr) 28px; align-items: center; gap: 10px; min-height: 48px; padding: 10px 9px 10px 14px; border: 1px solid var(--koco-border); border-radius: 10px; background: #fff; box-shadow: 0 12px 30px rgba(34, 24, 20, 0.14); color: var(--koco-text); font-size: 13px; pointer-events: auto; animation: ui-toast-in 160ms ease; }
+.ui-toast.ui-toast-closing { pointer-events: none; animation: ui-toast-out 160ms ease forwards; }
 .ui-toast-mark { width: 8px; height: 8px; border-radius: 50%; background: var(--koco-info); }
 .ui-toast-success .ui-toast-mark { background: var(--koco-primary); }
 .ui-toast-error .ui-toast-mark { background: var(--koco-danger); }
-.ui-toast > button { width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent; color: var(--koco-muted); cursor: pointer; font-size: 18px; }
-.ui-toast > button:hover { background: var(--koco-surface-subtle); }
+.ui-toast .ui-tooltip-trigger { justify-self: end; }
+.ui-toast-close { display: grid; width: 28px; height: 28px; padding: 0; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--koco-weak); cursor: pointer; transition: background-color 140ms ease, color 140ms ease; }
+.ui-toast-close:hover { background: var(--koco-surface-subtle); color: var(--koco-text); }
+.ui-toast-close svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 1.6; }
 
 @keyframes ui-spin { to { transform: rotate(360deg); } }
 @keyframes ui-fade-in { from { opacity: 0; } }
@@ -123,6 +126,7 @@
 @keyframes ui-tooltip-in { from { opacity: 0; transform: translateY(2px); } }
 @keyframes ui-menu-in { from { opacity: 0; transform: translateY(5px); } }
 @keyframes ui-toast-in { from { opacity: 0; transform: translateY(6px); } }
+@keyframes ui-toast-out { to { opacity: 0; transform: translateY(6px); } }
 
 @media (prefers-reduced-motion: reduce) {
   .ui-modal-mask,
