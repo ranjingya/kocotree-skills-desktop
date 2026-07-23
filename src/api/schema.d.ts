@@ -406,22 +406,43 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         ErrorResponse: {
-            code: components["schemas"]["ErrorCode"];
-            /** @description 结构化错误详情；没有附加详情时为空对象。 */
-            data: {
-                [key: string]: unknown;
-            };
+            code: components["schemas"]["ErrorHttpStatus"];
+            data: components["schemas"]["ErrorData"];
             /** @description 用户可读的错误信息。 */
             msg: string;
         };
+        /**
+         * @description 与 HTTP 响应状态码一致。
+         * @enum {integer}
+         */
+        ErrorHttpStatus: 400 | 401 | 403 | 404 | 409 | 413 | 415 | 422 | 500;
+        /** @description 业务错误码与结构化错误详情。 */
+        ErrorData: {
+            errorCode: components["schemas"]["BusinessErrorCode"];
+        } & {
+            [key: string]: unknown;
+        };
         /** @enum {string} */
-        ErrorCode: "COLLABORATOR_REQUIRED" | "CONTENT_UNCHANGED" | "DISPLAY_NAME_CONFIRMATION_REQUIRED" | "DUPLICATE_SKILL_NAME" | "FILE_NOT_FOUND" | "FILE_PREVIEW_UNAVAILABLE" | "FORBIDDEN" | "INITIAL_VERSION_REQUIRED" | "INSTALLATION_UNAVAILABLE" | "INVALID_REQUEST" | "INVALID_SEMVER" | "INVALID_SKILL_PACKAGE" | "OWNER_REQUIRED" | "PACKAGE_HASH_MISMATCH" | "PACKAGE_TOO_LARGE" | "SKILL_NAME_MISMATCH" | "SKILL_NOT_FOUND" | "SKILL_UNAVAILABLE" | "TRANSFER_NOT_FOUND" | "TRANSFER_RESOLVED" | "UNAUTHENTICATED" | "USER_DISABLED" | "VERSION_ALREADY_EXISTS" | "VERSION_CONFLICT" | "VERSION_NOT_FOUND" | "VERSION_NOT_GREATER";
-        ApiSuccessMeta: {
+        BusinessErrorCode: "COLLABORATOR_REQUIRED" | "CONTENT_UNCHANGED" | "DISPLAY_NAME_CONFIRMATION_REQUIRED" | "DUPLICATE_SKILL_NAME" | "FILE_NOT_FOUND" | "FILE_PREVIEW_UNAVAILABLE" | "FORBIDDEN" | "INITIAL_VERSION_REQUIRED" | "INSTALLATION_UNAVAILABLE" | "INVALID_REQUEST" | "INVALID_SEMVER" | "INVALID_SKILL_PACKAGE" | "OWNER_REQUIRED" | "PACKAGE_HASH_MISMATCH" | "PACKAGE_TOO_LARGE" | "SKILL_NAME_MISMATCH" | "SKILL_NOT_FOUND" | "SKILL_UNAVAILABLE" | "TRANSFER_NOT_FOUND" | "TRANSFER_RESOLVED" | "UNAUTHENTICATED" | "USER_DISABLED" | "VERSION_ALREADY_EXISTS" | "VERSION_CONFLICT" | "VERSION_NOT_FOUND" | "VERSION_NOT_GREATER";
+        ApiOkMeta: {
             /**
-             * @description 成功响应的固定业务码。
+             * @description 与 HTTP 成功状态码一致。
              * @constant
              */
-            code: "SUCCESS";
+            code: 200;
+            /**
+             * @description 成功响应的固定信息。
+             * @example success
+             * @constant
+             */
+            msg: "success";
+        };
+        ApiCreatedMeta: {
+            /**
+             * @description 与 HTTP 创建成功状态码一致。
+             * @constant
+             */
+            code: 201;
             /**
              * @description 成功响应的固定信息。
              * @example success
@@ -652,49 +673,55 @@ export interface components {
             total: number;
             unreadCount: number;
         };
-        UserResponse: components["schemas"]["ApiSuccessMeta"] & {
+        UserResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["User"];
         };
-        SkillPageResponse: components["schemas"]["ApiSuccessMeta"] & {
+        SkillPageResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["SkillPage"];
         };
-        TagListResponse: components["schemas"]["ApiSuccessMeta"] & {
+        TagListResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["Tag"][];
         };
-        SkillDetailResponse: components["schemas"]["ApiSuccessMeta"] & {
+        SkillDetailResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["SkillDetail"];
         };
-        VersionPageResponse: components["schemas"]["ApiSuccessMeta"] & {
+        SkillDetailCreatedResponse: components["schemas"]["ApiCreatedMeta"] & {
+            data: components["schemas"]["SkillDetail"];
+        };
+        VersionPageResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["VersionPage"];
         };
-        SkillVersionDetailResponse: components["schemas"]["ApiSuccessMeta"] & {
+        SkillVersionDetailResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["SkillVersionDetail"];
         };
-        FileEntryListResponse: components["schemas"]["ApiSuccessMeta"] & {
+        FileEntryListResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["FileEntry"][];
         };
-        FileContentResponse: components["schemas"]["ApiSuccessMeta"] & {
+        FileContentResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["FileContent"];
         };
-        SkillVersionResponse: components["schemas"]["ApiSuccessMeta"] & {
+        SkillVersionResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["SkillVersion"];
         };
-        InstallationStatusResponse: components["schemas"]["ApiSuccessMeta"] & {
+        InstallationStatusResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["InstallationStatus"];
         };
-        OwnershipTransferResponse: components["schemas"]["ApiSuccessMeta"] & {
+        OwnershipTransferResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["OwnershipTransfer"];
         };
-        DownloadTicketResponse: components["schemas"]["ApiSuccessMeta"] & {
+        OwnershipTransferCreatedResponse: components["schemas"]["ApiCreatedMeta"] & {
+            data: components["schemas"]["OwnershipTransfer"];
+        };
+        DownloadTicketCreatedResponse: components["schemas"]["ApiCreatedMeta"] & {
             data: components["schemas"]["DownloadTicket"];
         };
-        InstallationResolutionResponse: components["schemas"]["ApiSuccessMeta"] & {
+        InstallationResolutionResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["InstallationResolution"];
         };
-        NotificationPageResponse: components["schemas"]["ApiSuccessMeta"] & {
+        NotificationPageResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["NotificationPage"];
         };
-        EmptyResponse: components["schemas"]["ApiSuccessMeta"] & {
+        EmptyResponse: components["schemas"]["ApiOkMeta"] & {
             data: components["schemas"]["EmptyData"];
         };
     };
@@ -837,7 +864,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillDetailResponse"];
+                    "application/json": components["schemas"]["SkillDetailCreatedResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -940,7 +967,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SkillDetailResponse"];
+                    "application/json": components["schemas"]["SkillDetailCreatedResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1149,7 +1176,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OwnershipTransferResponse"];
+                    "application/json": components["schemas"]["OwnershipTransferCreatedResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];
@@ -1242,7 +1269,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DownloadTicketResponse"];
+                    "application/json": components["schemas"]["DownloadTicketCreatedResponse"];
                 };
             };
             default: components["responses"]["ErrorResponse"];

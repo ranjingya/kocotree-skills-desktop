@@ -1,9 +1,10 @@
 import type { components, operations } from "./schema";
 
 /** HTTP 成功响应外层；真实客户端完成校验后向页面返回 data。 */
-export type ApiSuccessDto<T> = components["schemas"]["ApiSuccessMeta"] & {
-  data: T;
-};
+export type ApiSuccessDto<T> = (
+  | components["schemas"]["ApiOkMeta"]
+  | components["schemas"]["ApiCreatedMeta"]
+) & { data: T };
 /** HTTP 失败响应外层；data 保存结构化错误详情。 */
 export type ApiErrorDto = components["schemas"]["ErrorResponse"];
 export type UserDto = components["schemas"]["User"];

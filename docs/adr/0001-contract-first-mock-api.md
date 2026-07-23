@@ -14,7 +14,7 @@
 - 提供人类可读的中文 API 文档，并与 OpenAPI 一一对应。
 - 前端实现阶段定义统一 `SkillApi` 接口。
 - `MockSkillApi` 和未来的 `HttpSkillApi` 实现同一接口。
-- HTTP 响应统一使用 `code`、`data`、`msg` 外层；`HttpSkillApi` 校验业务码后向 React 组件返回 `data`。
+- HTTP 响应统一使用 `code`、`data`、`msg` 外层，数字 `code` 与 HTTP 状态码一致，失败响应的业务错误码位于 `data.errorCode`；`HttpSkillApi` 校验状态后向 React 组件返回 `data`。
 - React 组件通过 `SkillApi` 访问服务端数据，不能直接导入模拟数据文件。
 - ZIP 预解析由客户端本地解析器负责；发布时 `SkillApi` 一次性接收 ZIP 和表单字段，并模拟服务端重新校验。
 - 新建 Skill 与发布版本使用独立接口；不使用临时 `uploadId`，也不依赖客户端计算的哈希作为服务端事实。

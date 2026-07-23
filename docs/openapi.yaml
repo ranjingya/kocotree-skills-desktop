@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Kocotree Skills API
-  version: 0.4.0
+  version: 0.5.0
   description: Kocotree Skills 客户端、模拟接口与未来真实后端共同遵守的契约。
   license:
     name: Proprietary
@@ -149,7 +149,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SkillDetailResponse'
+                $ref: '#/components/schemas/SkillDetailCreatedResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}:
@@ -243,7 +243,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SkillDetailResponse'
+                $ref: '#/components/schemas/SkillDetailCreatedResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/skills/{skillId}/versions/{versionId}:
@@ -430,7 +430,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OwnershipTransferResponse'
+                $ref: '#/components/schemas/OwnershipTransferCreatedResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/ownership-transfers/{transferId}/accept:
@@ -503,7 +503,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DownloadTicketResponse'
+                $ref: '#/components/schemas/DownloadTicketCreatedResponse'
         default:
           $ref: '#/components/responses/ErrorResponse'
   /api/installations/resolve:
@@ -668,15 +668,25 @@ components:
       required: [code, data, msg]
       properties:
         code:
-          $ref: '#/components/schemas/ErrorCode'
+          $ref: '#/components/schemas/ErrorHttpStatus'
         data:
-          description: 结构化错误详情；没有附加详情时为空对象。
-          type: object
-          additionalProperties: true
+          $ref: '#/components/schemas/ErrorData'
         msg:
           description: 用户可读的错误信息。
           type: string
-    ErrorCode:
+    ErrorHttpStatus:
+      description: 与 HTTP 响应状态码一致。
+      type: integer
+      enum: [400, 401, 403, 404, 409, 413, 415, 422, 500]
+    ErrorData:
+      description: 业务错误码与结构化错误详情。
+      type: object
+      required: [errorCode]
+      properties:
+        errorCode:
+          $ref: '#/components/schemas/BusinessErrorCode'
+      additionalProperties: true
+    BusinessErrorCode:
       type: string
       enum:
         - COLLABORATOR_REQUIRED
@@ -705,14 +715,27 @@ components:
         - VERSION_CONFLICT
         - VERSION_NOT_FOUND
         - VERSION_NOT_GREATER
-    ApiSuccessMeta:
+    ApiOkMeta:
       type: object
       required: [code, msg]
       properties:
         code:
-          description: 成功响应的固定业务码。
+          description: 与 HTTP 成功状态码一致。
+          type: integer
+          const: 200
+        msg:
+          description: 成功响应的固定信息。
           type: string
-          const: SUCCESS
+          const: success
+          example: success
+    ApiCreatedMeta:
+      type: object
+      required: [code, msg]
+      properties:
+        code:
+          description: 与 HTTP 创建成功状态码一致。
+          type: integer
+          const: 201
         msg:
           description: 成功响应的固定信息。
           type: string
@@ -1263,7 +1286,7 @@ components:
           minimum: 0
     UserResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
@@ -1271,7 +1294,7 @@ components:
               $ref: '#/components/schemas/User'
     SkillPageResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
@@ -1279,7 +1302,7 @@ components:
               $ref: '#/components/schemas/SkillPage'
     TagListResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
@@ -1289,7 +1312,15 @@ components:
                 $ref: '#/components/schemas/Tag'
     SkillDetailResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/SkillDetail'
+    SkillDetailCreatedResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiCreatedMeta'
         - type: object
           required: [data]
           properties:
@@ -1297,7 +1328,7 @@ components:
               $ref: '#/components/schemas/SkillDetail'
     VersionPageResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
@@ -1305,7 +1336,7 @@ components:
               $ref: '#/components/schemas/VersionPage'
     SkillVersionDetailResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
@@ -1313,7 +1344,7 @@ components:
               $ref: '#/components/schemas/SkillVersionDetail'
     FileEntryListResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
@@ -1323,7 +1354,7 @@ components:
                 $ref: '#/components/schemas/FileEntry'
     FileContentResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
@@ -1331,7 +1362,7 @@ components:
               $ref: '#/components/schemas/FileContent'
     SkillVersionResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
@@ -1339,7 +1370,7 @@ components:
               $ref: '#/components/schemas/SkillVersion'
     InstallationStatusResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
@@ -1347,15 +1378,23 @@ components:
               $ref: '#/components/schemas/InstallationStatus'
     OwnershipTransferResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
             data:
               $ref: '#/components/schemas/OwnershipTransfer'
-    DownloadTicketResponse:
+    OwnershipTransferCreatedResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiCreatedMeta'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: '#/components/schemas/OwnershipTransfer'
+    DownloadTicketCreatedResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiCreatedMeta'
         - type: object
           required: [data]
           properties:
@@ -1363,7 +1402,7 @@ components:
               $ref: '#/components/schemas/DownloadTicket'
     InstallationResolutionResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
@@ -1371,7 +1410,7 @@ components:
               $ref: '#/components/schemas/InstallationResolution'
     NotificationPageResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
@@ -1379,7 +1418,7 @@ components:
               $ref: '#/components/schemas/NotificationPage'
     EmptyResponse:
       allOf:
-        - $ref: '#/components/schemas/ApiSuccessMeta'
+        - $ref: '#/components/schemas/ApiOkMeta'
         - type: object
           required: [data]
           properties:
